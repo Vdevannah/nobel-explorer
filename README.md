@@ -2,19 +2,23 @@
 
 Nobel Explorer is an educational application for exploring Nobel Prize data. The
 current repository contains a FastAPI backend, MySQL connectivity, health check
-endpoints, and a SQLAlchemy ORM data model for prizes, laureates, discoveries,
-real-world applications, explanations, and quizzes.
+endpoints, and a SQLAlchemy ORM data model for prizes, laureates, award-time
+institutional affiliations, discoveries, real-world applications, explanations,
+and quizzes.
 
 ## Current phase
 
 The database foundation is now in place. This phase includes:
 
-- Eight SQLAlchemy ORM models with typed columns and bidirectional relationships
+- Ten SQLAlchemy ORM models with typed columns and bidirectional relationships
 - A many-to-many laureate/prize association model with prize-share data
+- Institution and award-affiliation models that preserve where a laureate was
+  affiliated when a specific prize was awarded
+- Laureate type and structured birth location fields
 - MySQL engine and session management through environment-based configuration
 - A utility for creating all model tables
-- An integration script that inserts a connected record graph and verifies that
-  the ORM relationships can be traversed in both directions
+- Integration scripts for the educational-content and institutional-affiliation
+  relationship graphs
 
 ## Project structure
 
@@ -25,13 +29,16 @@ nobel-explorer/
 │   │   ├── __init__.py
 │   │   ├── connection.py
 │   │   ├── create_tables.py
+│   │   ├── test_affiliation_relationship.py
 │   │   └── test_relationships.py
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── application.py
+│   │   ├── award_affiliation.py
 │   │   ├── category.py
 │   │   ├── discovery.py
 │   │   ├── explanation.py
+│   │   ├── institution.py
 │   │   ├── laureate.py
 │   │   ├── laureate_prize.py
 │   │   ├── prize.py
@@ -109,6 +116,8 @@ The ORM schema connects the educational content as follows:
 ```text
 Category ──< Prize ──< LaureatePrize >── Laureate
                          │
+                         ├──< AwardAffiliation >── Institution
+                         │
                          └──< Discovery
                                 ├──< Application ──< Explanation
                                 └──< QuizQuestion
@@ -118,15 +127,23 @@ Category ──< Prize ──< LaureatePrize >── Laureate
 | --- | --- |
 | `Category` | Stores Nobel Prize categories and their descriptions |
 | `Prize` | Stores a prize year, motivation, and category |
-| `Laureate` | Stores biographical and affiliation information |
+| `Laureate` | Stores laureate type, biographical details, and birth location |
 | `LaureatePrize` | Connects laureates to prizes and records prize shares |
+| `Institution` | Stores an institution's name and location |
+| `AwardAffiliation` | Connects an awarded prize to the laureate's institution at that time |
 | `Discovery` | Describes the work associated with a laureate's prize |
 | `Application` | Connects a discovery to a real-world use |
 | `Explanation` | Provides level-specific educational explanations |
 | `QuizQuestion` | Stores multiple-choice questions for a discovery |
 
-The `LaureatePrize` table has a unique constraint on each laureate/prize pair to
-prevent duplicate associations.
+The association tables enforce unique relationship pairs:
+
+- `LaureatePrize` prevents duplicate laureate/prize combinations.
+- `AwardAffiliation` prevents duplicate laureate-prize/institution combinations.
+
+Keeping affiliation on the award relationship instead of directly on the
+laureate allows one laureate to have different institutions for different Nobel
+Prizes.
 
 ## Create the database tables
 
@@ -143,7 +160,9 @@ python -m backend.database.create_tables
 ```
 
 The command imports every model so SQLAlchemy can register the complete schema,
-then creates any missing tables. It does not drop or recreate existing tables.
+then creates any missing tables. It does not drop, recreate, or alter existing
+tables. If you created the schema before adding the new columns or models, use a
+migration or recreate the development database before testing the updated schema.
 
 ## Verify ORM relationships
 
@@ -163,6 +182,25 @@ ORM relationships are working successfully.
 
 The test currently commits its sample records to the configured database. Use a
 development database when running it repeatedly.
+
+### Test award affiliations
+
+To verify the `LaureatePrize`, `AwardAffiliation`, and `Institution`
+relationships, run:
+
+```bash
+python -m backend.database.test_affiliation_relationship
+```
+
+This script creates a temporary prize and affiliation graph, flushes it to MySQL,
+and verifies relationship traversal. A successful run ends with:
+
+```text
+Affiliation relationship test passed.
+```
+
+The affiliation test rolls back its transaction, so its temporary records are
+not permanently saved.
 
 ## Run the API
 

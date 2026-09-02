@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.connection import Base
@@ -6,6 +6,14 @@ from backend.database.connection import Base
 
 class Explanation(Base):
     __tablename__ = "explanation"
+
+    __table_args__ = (
+        UniqueConstraint(
+        "application_id",
+        "level",
+        name="uq_explanation_application_level"
+    ),
+)
 
     explanation_id: Mapped[int] = mapped_column(
         Integer,
