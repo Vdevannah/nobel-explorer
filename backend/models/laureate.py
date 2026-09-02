@@ -19,8 +19,23 @@ class Laureate(Base):
         nullable=False
     )
 
+    laureate_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
     birth_date: Mapped[date | None] = mapped_column(
         Date,
+        nullable=True
+    )
+
+    birth_city: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+
+    birth_state: Mapped[str | None] = mapped_column(
+        String(100),
         nullable=True
     )
 
@@ -31,11 +46,6 @@ class Laureate(Base):
 
     gender: Mapped[str | None] = mapped_column(
         String(50),
-        nullable=True
-    )
-
-    affiliation: Mapped[str | None] = mapped_column(
-        Text,
         nullable=True
     )
 

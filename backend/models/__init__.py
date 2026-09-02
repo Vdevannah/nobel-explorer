@@ -6,3 +6,5 @@ from backend.models.discovery import Discovery
 from backend.models.application import Application
 from backend.models.explanation import Explanation
 from backend.models.quiz_question import QuizQuestion
+from backend.models.institution import Institution
+from backend.models.award_affiliation import AwardAffiliation

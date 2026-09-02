@@ -49,3 +49,8 @@ class LaureatePrize(Base):
         "Discovery",
         back_populates="laureate_prize"
     )
+
+    award_affiliations = relationship(
+    "AwardAffiliation",
+    back_populates="laureate_prize"
+)
