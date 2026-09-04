@@ -126,9 +126,9 @@ Category ──< Prize ──< LaureatePrize >── Laureate
 | Model | Purpose |
 | --- | --- |
 | `Category` | Stores Nobel Prize categories and their descriptions |
-| `Prize` | Stores a prize year, motivation, and category |
+| `Prize` | Stores a prize year and category |
 | `Laureate` | Stores laureate type, biographical details, and birth location |
-| `LaureatePrize` | Connects laureates to prizes and records prize shares |
+| `LaureatePrize` | Connects laureates to prizes and records prize shares and motivations |
 | `Institution` | Stores an institution's name and location |
 | `AwardAffiliation` | Connects an awarded prize to the laureate's institution at that time |
 | `Discovery` | Describes the work associated with a laureate's prize |

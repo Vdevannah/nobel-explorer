@@ -11,6 +11,7 @@ from backend.repositories.award_affiliation_repository import (
     create,
     get_by_id,
     get_by_laureate_prize,
+    get_by_laureate_prize_and_institution,
     get_by_institution,
 )
 
@@ -26,11 +27,11 @@ def test_award_affiliation_repository():
 
         prize = Prize(
             year=2024,
-            motivation="Temporary Nobel prize",
             category=category
         )
 
         laureate = Laureate(
+            nobel_laureate_id="TEST-012",
             full_name="Test Affiliation Laureate",
             laureate_type="Person",
             featured=False
@@ -39,7 +40,8 @@ def test_award_affiliation_repository():
         laureate_prize = LaureatePrize(
             laureate=laureate,
             prize=prize,
-            prize_share="1/1"
+            prize_share="1/1",
+            motivation="Temporary Nobel prize"
         )
 
         institution = Institution(
@@ -67,6 +69,26 @@ def test_award_affiliation_repository():
         )
 
         assert found_affiliation is not None
+
+        found_combination = get_by_laureate_prize_and_institution(
+            db,
+            laureate_prize.laureate_prize_id,
+            institution.institution_id
+        )
+
+        assert found_combination is not None
+        assert (
+            found_combination.award_affiliation_id
+            == created_affiliation.award_affiliation_id
+        )
+
+        missing_combination = get_by_laureate_prize_and_institution(
+            db,
+            laureate_prize.laureate_prize_id,
+            -1
+        )
+
+        assert missing_combination is None
 
         print(
             "Affiliation ID:",

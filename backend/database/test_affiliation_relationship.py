@@ -20,11 +20,11 @@ def test_affiliation_relationship():
 
         prize = Prize(
             year=2025,
-            motivation="Temporary test prize",
             category=category
         )
 
         laureate = Laureate(
+            nobel_laureate_id="TEST-002",
             full_name="Test Laureate",
             laureate_type="Person",
             birth_city="Test City",
@@ -36,7 +36,8 @@ def test_affiliation_relationship():
         laureate_prize = LaureatePrize(
             laureate=laureate,
             prize=prize,
-            prize_share="1/2"
+            prize_share="1/2",
+            motivation="Temporary test prize"
         )
 
         institution = Institution(

@@ -126,7 +126,7 @@ def get_us_birth_state_counts_by_category(
         )
         .where(
             Category.name == category_name,
-            Laureate.birth_country == "United States",
+            Laureate.birth_country == "USA",
             Laureate.birth_state.is_not(None),
             Laureate.laureate_type == "Person"
         )

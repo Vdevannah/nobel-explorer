@@ -14,6 +14,12 @@ class Laureate(Base):
         primary_key=True
     )
 
+    nobel_laureate_id: Mapped[str] = mapped_column(
+    String(20),
+    unique=True,
+    nullable=False
+)
+
     full_name: Mapped[str] = mapped_column(
         String(200),
         nullable=False

@@ -22,12 +22,13 @@ def test_relationships():
 
         prize = Prize(
             year=2023,
-            motivation="Temporary test motivation",
             category=category,
         )
 
         laureate = Laureate(
+            nobel_laureate_id="TEST-001",
             full_name="Test Laureate",
+            laureate_type="Person",
             birth_country="Test Country",
             featured=True,
         )
@@ -36,6 +37,7 @@ def test_relationships():
             laureate=laureate,
             prize=prize,
             prize_share="1/2",
+            motivation="Temporary test motivation",
         )
 
         discovery = Discovery(
@@ -68,7 +70,7 @@ def test_relationships():
         )
 
         db.add(category)
-        db.commit()
+        db.flush()
 
         print("Category:", category.name)
         print("Prize:", category.prizes[0].year)

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.connection import Base
@@ -32,6 +32,11 @@ class LaureatePrize(Base):
 
     prize_share: Mapped[str | None] = mapped_column(
         String(20),
+        nullable=True
+    )
+
+    motivation: Mapped[str | None] = mapped_column(
+        Text,
         nullable=True
     )
 

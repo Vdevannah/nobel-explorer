@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, Text
+from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.connection import Base
@@ -15,11 +15,6 @@ class Prize(Base):
     year: Mapped[int] = mapped_column(
         Integer,
         nullable=False
-    )
-
-    motivation: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True
     )
 
     category_id: Mapped[int] = mapped_column(

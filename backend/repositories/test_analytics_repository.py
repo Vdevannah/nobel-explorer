@@ -26,17 +26,23 @@ def test_analytics_repository():
     db = SessionLocal()
 
     try:
+        baseline_laureates = count_total_laureates(db)
+        baseline_prizes = count_total_prizes(db)
+        baseline_decade_counts = dict(
+            get_laureate_counts_by_decade(db)
+        )
+
         # =========================================================
         # 1. CATEGORIES
         # =========================================================
 
         chemistry = Category(
-            name="Chemistry",
+            name="Test Analytics Chemistry",
             description="Temporary test category"
         )
 
         medicine = Category(
-            name="Medicine",
+            name="Test Analytics Medicine",
             description="Temporary test category"
         )
 
@@ -46,13 +52,11 @@ def test_analytics_repository():
 
         chemistry_prize = Prize(
             year=2024,
-            motivation="Temporary chemistry prize",
             category=chemistry
         )
 
         medicine_prize = Prize(
             year=2024,
-            motivation="Temporary medicine prize",
             category=medicine
         )
 
@@ -60,19 +64,16 @@ def test_analytics_repository():
 
         prize_1984 = Prize(
             year=1984,
-            motivation="Temporary 1980s prize",
             category=chemistry
         )
 
         prize_1995 = Prize(
             year=1995,
-            motivation="Temporary 1990s prize",
             category=chemistry
         )
 
         prize_2006 = Prize(
             year=2006,
-            motivation="Temporary 2000s prize",
             category=chemistry
         )
 
@@ -81,15 +82,17 @@ def test_analytics_repository():
         # =========================================================
 
         laureate_one = Laureate(
+            nobel_laureate_id="TEST-003",
             full_name="Test Laureate One",
             laureate_type="Person",
-            birth_country="United States",
+            birth_country="USA",
             birth_state="California",
             gender="Female",
             featured=False
         )
 
         laureate_two = Laureate(
+            nobel_laureate_id="TEST-004",
             full_name="Test Laureate Two",
             laureate_type="Person",
             birth_country="Germany",
@@ -100,26 +103,29 @@ def test_analytics_repository():
         # Medicine laureates have birth dates for Step 7 testing
 
         laureate_three = Laureate(
+            nobel_laureate_id="TEST-005",
             full_name="Test Laureate Three",
             laureate_type="Person",
             birth_date=date(1964, 1, 1),
-            birth_country="United States",
+            birth_country="USA",
             birth_state="New York",
             gender="Female",
             featured=False
         )
 
         laureate_four = Laureate(
+            nobel_laureate_id="TEST-006",
             full_name="Test Laureate Four",
             laureate_type="Person",
             birth_date=date(1974, 1, 1),
-            birth_country="United States",
+            birth_country="USA",
             birth_state="California",
             gender="Male",
             featured=False
         )
 
         laureate_five = Laureate(
+            nobel_laureate_id="TEST-007",
             full_name="Test Laureate Five",
             laureate_type="Person",
             birth_date=date(1984, 1, 1),
@@ -129,10 +135,11 @@ def test_analytics_repository():
         )
 
         laureate_six = Laureate(
+            nobel_laureate_id="TEST-008",
             full_name="Test Laureate Six",
             laureate_type="Person",
             birth_date=date(1994, 1, 1),
-            birth_country="United States",
+            birth_country="USA",
             birth_state="Delaware",
             gender="Male",
             featured=False
@@ -141,18 +148,21 @@ def test_analytics_repository():
         # Extra laureates for decade analytics
 
         laureate_seven = Laureate(
+            nobel_laureate_id="TEST-009",
             full_name="Test Laureate Seven",
             laureate_type="Person",
             featured=False
         )
 
         laureate_eight = Laureate(
+            nobel_laureate_id="TEST-010",
             full_name="Test Laureate Eight",
             laureate_type="Person",
             featured=False
         )
 
         laureate_nine = Laureate(
+            nobel_laureate_id="TEST-011",
             full_name="Test Laureate Nine",
             laureate_type="Person",
             featured=False
@@ -226,14 +236,14 @@ def test_analytics_repository():
             name="Test University A",
             city="Boston",
             state="Massachusetts",
-            country="United States"
+            country="USA"
         )
 
         institution_two = Institution(
             name="Test University B",
             city="New York",
             state="New York",
-            country="United States"
+            country="USA"
         )
 
         institution_three = Institution(
@@ -331,13 +341,13 @@ def test_analytics_repository():
         for category_name, count in category_counts:
             print(category_name, count)
 
-        assert total_laureates == 9
-        assert total_prizes == 5
+        assert total_laureates == baseline_laureates + 9
+        assert total_prizes == baseline_prizes + 5
 
         category_dict = dict(category_counts)
 
-        assert category_dict["Chemistry"] == 5
-        assert category_dict["Medicine"] == 4
+        assert category_dict["Test Analytics Chemistry"] == 5
+        assert category_dict["Test Analytics Medicine"] == 4
 
         print("\nAnalytics repository Step 1 test passed.")
 
@@ -348,7 +358,7 @@ def test_analytics_repository():
         medicine_country_counts = (
             get_laureate_counts_by_country_and_category(
                 db,
-                "Medicine"
+                "Test Analytics Medicine"
             )
         )
 
@@ -359,10 +369,10 @@ def test_analytics_repository():
 
         medicine_country_dict = dict(medicine_country_counts)
 
-        assert medicine_country_dict["United States"] == 3
+        assert medicine_country_dict["USA"] == 3
         assert medicine_country_dict["Japan"] == 1
 
-        assert medicine_country_counts[0][0] == "United States"
+        assert medicine_country_counts[0][0] == "USA"
         assert medicine_country_counts[0][1] == 3
 
         print("\nAnalytics repository Step 2 test passed.")
@@ -374,7 +384,7 @@ def test_analytics_repository():
         medicine_state_counts = (
             get_us_birth_state_counts_by_category(
                 db,
-                "Medicine"
+                "Test Analytics Medicine"
             )
         )
 
@@ -398,8 +408,8 @@ def test_analytics_repository():
         us_medicine_institutions = (
             get_institution_counts_by_category(
                 db,
-                "Medicine",
-                "United States"
+                "Test Analytics Medicine",
+                "USA"
             )
         )
 
@@ -426,7 +436,7 @@ def test_analytics_repository():
 
         medicine_gender_counts = get_gender_counts_by_category(
             db,
-            "Medicine"
+            "Test Analytics Medicine"
         )
 
         print("\nMedicine laureates by gender:")
@@ -454,10 +464,10 @@ def test_analytics_repository():
 
         decade_dict = dict(decade_counts)
 
-        assert decade_dict[1980] == 1
-        assert decade_dict[1990] == 1
-        assert decade_dict[2000] == 1
-        assert decade_dict[2020] == 6
+        assert decade_dict[1980] == baseline_decade_counts.get(1980, 0) + 1
+        assert decade_dict[1990] == baseline_decade_counts.get(1990, 0) + 1
+        assert decade_dict[2000] == baseline_decade_counts.get(2000, 0) + 1
+        assert decade_dict[2020] == baseline_decade_counts.get(2020, 0) + 6
 
         print("\nAnalytics repository Step 6 test passed.")
 
@@ -467,7 +477,7 @@ def test_analytics_repository():
 
         average_age = get_average_age_at_award_by_category(
             db,
-            "Medicine"
+            "Test Analytics Medicine"
         )
 
         print(

@@ -32,11 +32,11 @@ def test_explanation_repository():
 
         prize = Prize(
             year=2024,
-            motivation="Temporary Nobel prize",
             category=category
         )
 
         laureate = Laureate(
+            nobel_laureate_id="TEST-014",
             full_name="Test Explanation Laureate",
             laureate_type="Person",
             featured=True
@@ -45,7 +45,8 @@ def test_explanation_repository():
         laureate_prize = LaureatePrize(
             laureate=laureate,
             prize=prize,
-            prize_share="1/1"
+            prize_share="1/1",
+            motivation="Temporary Nobel prize"
         )
 
         discovery = Discovery(

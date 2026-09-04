@@ -28,11 +28,11 @@ def test_quiz_question_repository():
 
         prize = Prize(
             year=2024,
-            motivation="Temporary Nobel prize",
             category=category
         )
 
         laureate = Laureate(
+            nobel_laureate_id="TEST-013",
             full_name="Test Quiz Laureate",
             laureate_type="Person",
             featured=True
@@ -41,7 +41,8 @@ def test_quiz_question_repository():
         laureate_prize = LaureatePrize(
             laureate=laureate,
             prize=prize,
-            prize_share="1/1"
+            prize_share="1/1",
+            motivation="Temporary Nobel prize"
         )
 
         discovery = Discovery(

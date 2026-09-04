@@ -37,6 +37,18 @@ def get_by_institution(
     return list(db.scalars(statement).all())
 
 
+def get_by_laureate_prize_and_institution(
+    db: Session,
+    laureate_prize_id: int,
+    institution_id: int
+) -> AwardAffiliation | None:
+    statement = select(AwardAffiliation).where(
+        AwardAffiliation.laureate_prize_id == laureate_prize_id,
+        AwardAffiliation.institution_id == institution_id
+    )
+    return db.scalar(statement)
+
+
 def create(
     db: Session,
     award_affiliation: AwardAffiliation

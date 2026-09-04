@@ -18,6 +18,15 @@ def get_by_id(
     )
     return db.scalar(statement)
 
+def get_by_nobel_id(
+    db: Session,
+    nobel_laureate_id: str
+) -> Laureate | None:
+    statement = select(Laureate).where(
+        Laureate.nobel_laureate_id == nobel_laureate_id
+    )
+    return db.scalar(statement)
+
 
 def get_featured(db: Session) -> list[Laureate]:
     statement = select(Laureate).where(

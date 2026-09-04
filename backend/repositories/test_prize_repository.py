@@ -24,7 +24,6 @@ def test_prize_repository():
 
         prize = Prize(
             year=2024,
-            motivation="Temporary prize for repository testing",
             category=category
         )
 
@@ -42,7 +41,7 @@ def test_prize_repository():
 
         print("Prize ID:", found_prize.prize_id)
         print("Prize Year:", found_prize.year)
-        print("Motivation:", found_prize.motivation)
+        assert not hasattr(found_prize, "motivation")
 
         category_prizes = get_by_category(
             db,
