@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 SQLAlchemy
+alembic>=1.13,<2.0
 PyMySQL
 python-dotenv
 requests

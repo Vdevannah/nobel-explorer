@@ -1,24 +1,29 @@
 # Nobel Explorer
 
-Nobel Explorer is an educational application for exploring Nobel Prize data. The
-current repository contains a FastAPI backend, MySQL connectivity, health check
-endpoints, and a SQLAlchemy ORM data model for prizes, laureates, award-time
-institutional affiliations, discoveries, real-world applications, explanations,
-and quizzes.
+Nobel Explorer is an educational application for exploring Nobel Prize data. It
+includes a FastAPI REST API, a MySQL database accessed through SQLAlchemy, and an
+ETL pipeline that imports raw Laureate data from the official Nobel Prize API.
+The API exposes Laureates, Prizes, award-time institutional affiliations, and
+analytics-ready Nobel data.
 
-## Current phase
+## Current status
 
-The database foundation is now in place. This phase includes:
+The database, ETL pipeline, repository layer, service layer, and read-only REST
+API are implemented. Current capabilities include:
 
-- Ten SQLAlchemy ORM models with typed columns and bidirectional relationships
-- A many-to-many laureate/prize association model with prize-share data
-- Institution and award-affiliation models that preserve where a laureate was
-  affiliated when a specific prize was awarded
-- Laureate type and structured birth location fields
-- MySQL engine and session management through environment-based configuration
-- A utility for creating all model tables
-- Integration scripts for the educational-content and institutional-affiliation
-  relationship graphs
+- Extraction from the official Nobel Prize API with pagination
+- Laureate, Prize, and award-affiliation transformation for 1901–2025
+- Safe handling of partial birth dates without inventing missing values
+- U.S. city/state normalization using full state names
+- Idempotent repository-based loading into MySQL
+- Paginated Laureate, Prize, and Institution endpoints
+- Laureate filtering by category, year, birth country, and gender
+- Case-insensitive Laureate name search
+- Nested Laureate/Prize/Institution relationship responses
+- Aggregate analytics for categories, birthplaces, institutions, gender,
+  decades, and approximate age at award
+- Centralized HTTP 404 handling and automatic FastAPI validation
+- Swagger/OpenAPI documentation and integration-style API tests
 
 ## Project structure
 
@@ -44,10 +49,31 @@ nobel-explorer/
 │   │   ├── prize.py
 │   │   └── quiz_question.py
 │   ├── routes/
-│   │   ├── __init__.py
-│   │   └── health.py
+│   │   ├── analytics.py
+│   │   ├── categories.py
+│   │   ├── health.py
+│   │   ├── institutions.py
+│   │   ├── laureates.py
+│   │   └── prizes.py
+│   ├── schemas/
+│   │   ├── analytics.py
+│   │   ├── category.py
+│   │   ├── institution.py
+│   │   ├── laureate.py
+│   │   └── prize.py
+│   ├── services/
+│   │   ├── analytics_service.py
+│   │   ├── category_service.py
+│   │   ├── institution_service.py
+│   │   ├── laureate_service.py
+│   │   └── prize_service.py
 │   ├── __init__.py
 │   └── main.py
+├── ETL/
+│   ├── extract.py
+│   ├── transform.py
+│   ├── load.py
+│   └── run_etl.py
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
@@ -180,8 +206,9 @@ relationships and prints the results. A successful run ends with:
 ORM relationships are working successfully.
 ```
 
-The test currently commits its sample records to the configured database. Use a
-development database when running it repeatedly.
+The test flushes its sample records so relationships and generated IDs can be
+verified, then rolls back the transaction. It does not permanently save its
+temporary records.
 
 ### Test award affiliations
 
@@ -226,6 +253,23 @@ FastAPI generates interactive documentation automatically:
 | `GET` | `/` | Confirms that the API is running |
 | `GET` | `/health` | Returns the application health status |
 | `GET` | `/health/db` | Checks the MySQL connection and returns the selected database |
+| `GET` | `/categories` | Lists Nobel Prize categories |
+| `GET` | `/categories/{category_id}` | Returns one category |
+| `GET` | `/laureates` | Lists, filters, and searches Laureates |
+| `GET` | `/laureates/{laureate_id}` | Returns Laureate details and awards |
+| `GET` | `/prizes` | Lists Nobel Prizes |
+| `GET` | `/prizes/{prize_id}` | Returns Prize details and awarded Laureates |
+| `GET` | `/institutions` | Lists award-time institutions |
+| `GET` | `/institutions/{institution_id}` | Returns one Institution |
+| `GET` | `/institutions/{institution_id}/awards` | Lists an Institution's Nobel affiliations |
+| `GET` | `/analytics/summary` | Returns total Laureate and Prize counts |
+| `GET` | `/analytics/laureates-by-category` | Counts Laureates by category |
+| `GET` | `/analytics/birth-countries` | Counts birth countries for a category |
+| `GET` | `/analytics/us-birth-states` | Counts U.S. birth states for a category |
+| `GET` | `/analytics/institutions` | Counts award-time institutions by category and country |
+| `GET` | `/analytics/gender` | Counts Laureates by gender for a category |
+| `GET` | `/analytics/decades` | Counts Laureates by award decade |
+| `GET` | `/analytics/average-age` | Returns approximate average age at award |
 
 Example database health response:
 
@@ -235,6 +279,72 @@ Example database health response:
   "database": "nobel_explorer"
 }
 ```
+
+### Laureate pagination, filters, and search
+
+`GET /laureates` supports `limit` and `offset`, plus optional `category`,
+`year`, `country`, `gender`, and `search` parameters. The `country` parameter
+means Laureate birth country.
+
+```text
+/laureates?limit=5&offset=0
+/laureates?category=Chemistry&gender=female
+/laureates?search=Einstein
+```
+
+Collection responses include the page items and the total matching record
+count:
+
+```json
+{
+  "items": [],
+  "total": 0,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+### Analytics semantics
+
+- Birth-country and U.S. birth-state analytics describe where individual
+  Laureates were born.
+- Institution analytics describe award-time affiliations. They do not describe
+  Laureate birthplaces.
+- `USA` is the canonical U.S. country value.
+- Average age at award is approximate because the database stores award year,
+  not an exact award date.
+
+## ETL pipeline
+
+The ETL flow is:
+
+```text
+Nobel Prize API → Extract → Transform → Repository-based Load → MySQL
+```
+
+The loader looks up existing records before creating them, allowing the same
+input to be processed repeatedly without adding duplicate relationship rows.
+The normal entry point processes the complete extracted data set:
+
+```bash
+python -m ETL.run_etl
+```
+
+This command writes Nobel data to the configured database. Use a development
+database and verify `.env` before running it. A limited development run remains
+available by importing `run_etl` and passing `max_laureates`.
+
+## Run tests
+
+The tests use the configured MySQL database and roll back temporary test data.
+Run the complete suite from the project root:
+
+```bash
+python -m pytest -v
+```
+
+The Phase 7 baseline is 78 passing tests. The exact count may increase as the
+project gains additional coverage.
 
 ## Development notes
 

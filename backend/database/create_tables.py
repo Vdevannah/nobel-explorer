@@ -4,7 +4,12 @@ from backend.database.connection import Base, engine
 
 
 def create_tables() -> None:
-    """Create all database tables defined by the application models."""
+    """Create tables for educational/reference use only.
+
+    Alembic migrations are authoritative for development and production
+    schema creation and evolution. Use ``alembic upgrade head`` for normal
+    database setup.
+    """
     Base.metadata.create_all(bind=engine)
 
 

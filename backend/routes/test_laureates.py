@@ -53,6 +53,36 @@ def test_list_laureates_rejects_invalid_offset():
     assert client.get("/laureates?offset=-1").status_code == 422
 
 
+def test_laureate_image_provenance_fields_serialize_null():
+    list_response = client.get(
+        "/laureates",
+        params={"search": "A. Michael Spence"}
+    )
+
+    assert list_response.status_code == 200
+    summary = next(
+        laureate
+        for laureate in list_response.json()["items"]
+        if laureate["nobel_laureate_id"] == "745"
+    )
+    image_fields = {
+        "image_url",
+        "image_source_url",
+        "image_attribution",
+        "image_license"
+    }
+    assert image_fields.issubset(summary)
+    assert all(summary[field] is None for field in image_fields)
+
+    detail_response = client.get(
+        f"/laureates/{summary['laureate_id']}"
+    )
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert image_fields.issubset(detail)
+    assert all(detail[field] is None for field in image_fields)
+
+
 def get_laureate_id_by_nobel_id(nobel_laureate_id: str) -> int:
     db = SessionLocal()
     try:

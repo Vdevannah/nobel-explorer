@@ -60,6 +60,21 @@ class Laureate(Base):
         nullable=True
     )
 
+    image_source_url: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    image_attribution: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    image_license: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+
     featured: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

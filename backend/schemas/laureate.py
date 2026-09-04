@@ -16,6 +16,9 @@ class LaureateSummaryResponse(BaseModel):
     gender: str | None
     featured: bool
     image_url: str | None
+    image_source_url: str | None
+    image_attribution: str | None
+    image_license: str | None
 
 
 class LaureateDetailResponse(LaureateSummaryResponse):
