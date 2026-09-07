@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.connection import Base
@@ -6,14 +6,25 @@ from backend.database.connection import Base
 
 class QuizQuestion(Base):
     __tablename__ = "quiz_question"
+    __table_args__ = (
+        CheckConstraint(
+            "level IN ('Simple', 'Explore', 'Advanced', 'Expert')",
+            name="ck_quiz_question_level",
+        ),
+        CheckConstraint(
+            "correct_answer IN ('A', 'B', 'C', 'D')",
+            name="ck_quiz_question_correct_answer",
+        ),
+        Index("ix_quiz_question_contribution_id", "contribution_id"),
+    )
 
     question_id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True
     )
 
-    discovery_id: Mapped[int] = mapped_column(
-        ForeignKey("discovery.discovery_id"),
+    contribution_id: Mapped[int] = mapped_column(
+        ForeignKey("contribution.contribution_id"),
         nullable=False
     )
 
@@ -57,7 +68,7 @@ class QuizQuestion(Base):
         nullable=True
     )
 
-    discovery = relationship(
-        "Discovery",
+    contribution = relationship(
+        "Contribution",
         back_populates="quiz_questions"
     )

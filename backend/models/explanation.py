@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database.connection import Base
@@ -9,19 +9,24 @@ class Explanation(Base):
 
     __table_args__ = (
         UniqueConstraint(
-        "application_id",
+        "contribution_id",
         "level",
-        name="uq_explanation_application_level"
-    ),
-)
+        name="uq_explanation_contribution_level",
+        ),
+        CheckConstraint(
+            "level IN ('Simple', 'Explore', 'Advanced', 'Expert')",
+            name="ck_explanation_level",
+        ),
+        Index("ix_explanation_contribution_id", "contribution_id"),
+    )
 
     explanation_id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True
     )
 
-    application_id: Mapped[int] = mapped_column(
-        ForeignKey("application.application_id"),
+    contribution_id: Mapped[int] = mapped_column(
+        ForeignKey("contribution.contribution_id"),
         nullable=False
     )
 
@@ -40,7 +45,7 @@ class Explanation(Base):
         nullable=True
     )
 
-    application = relationship(
-        "Application",
-        back_populates="explanations"
+    contribution = relationship(
+        "Contribution",
+        back_populates="explanations",
     )

@@ -50,8 +50,8 @@ class LaureatePrize(Base):
         back_populates="laureate_prizes"
     )
 
-    discoveries = relationship(
-        "Discovery",
+    contributions = relationship(
+        "Contribution",
         back_populates="laureate_prize"
     )
 

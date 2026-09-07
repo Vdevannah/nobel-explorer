@@ -4,8 +4,8 @@ from backend.models import (
     Prize,
     Laureate,
     LaureatePrize,
-    Discovery,
-    Application,
+    Contribution,
+    Connection,
     Explanation,
     QuizQuestion,
 )
@@ -40,26 +40,29 @@ def test_relationships():
             motivation="Temporary test motivation",
         )
 
-        discovery = Discovery(
+        contribution = Contribution(
+            laureate=laureate,
             laureate_prize=laureate_prize,
-            title="Test Discovery",
-            summary="Temporary discovery used for ORM testing",
+            contribution_type="NOBEL_LINKED",
+            title="Test Contribution",
+            summary="Temporary contribution used for ORM testing",
         )
 
-        application = Application(
-            discovery=discovery,
-            title="Test Application",
+        connection = Connection(
+            contribution=contribution,
+            connection_type="APPLICATION",
+            title="Test Connection",
             description="Temporary real-world application",
         )
 
         explanation = Explanation(
-            application=application,
+            contribution=contribution,
             level="Simple",
             explanation_text="Temporary explanation",
         )
 
         quiz_question = QuizQuestion(
-            discovery=discovery,
+            contribution=contribution,
             level="Simple",
             question="What is being tested?",
             choice_a="ORM relationships",
@@ -76,10 +79,10 @@ def test_relationships():
         print("Prize:", category.prizes[0].year)
         print("Prize category:", prize.category.name)
         print("Laureate:", prize.laureate_prizes[0].laureate.full_name)
-        print("Discovery:", laureate_prize.discoveries[0].title)
-        print("Application:", discovery.applications[0].title)
-        print("Explanation:", application.explanations[0].explanation_text)
-        print("Quiz:", discovery.quiz_questions[0].question)
+        print("Contribution:", laureate_prize.contributions[0].title)
+        print("Connection:", contribution.connections[0].title)
+        print("Explanation:", contribution.explanations[0].explanation_text)
+        print("Quiz:", contribution.quiz_questions[0].question)
 
         print("\nORM relationships are working successfully.")
 

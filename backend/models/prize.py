@@ -31,3 +31,8 @@ class Prize(Base):
         "LaureatePrize",
         back_populates="prize"
     )
+
+    related_connections = relationship(
+        "Connection",
+        back_populates="related_prize",
+    )
