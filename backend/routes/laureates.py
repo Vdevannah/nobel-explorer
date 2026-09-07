@@ -6,6 +6,8 @@ from backend.schemas.laureate import (
     LaureateDetailResponse,
     PaginatedLaureatesResponse,
 )
+from backend.schemas.contribution import ContributionResponse, ContributionType
+from backend.services import contribution_service
 from backend.services import laureate_service
 
 
@@ -13,6 +15,27 @@ router = APIRouter(
     prefix="/laureates",
     tags=["Laureates"]
 )
+
+
+@router.get(
+    "/{laureate_id}/contributions",
+    response_model=list[ContributionResponse],
+    summary="List educational contributions for a laureate",
+    responses={404: {"description": "Laureate not found"}},
+)
+def list_laureate_contributions(
+    laureate_id: int = Path(
+        description="Nobel Explorer internal laureate database ID"
+    ),
+    contribution_type: ContributionType | None = Query(
+        default=None,
+        description="Optional Nobel-linked or beyond-Nobel filter",
+    ),
+    db: Session = Depends(get_db),
+):
+    return contribution_service.list_laureate_contributions(
+        db, laureate_id, contribution_type
+    )
 
 
 @router.get(

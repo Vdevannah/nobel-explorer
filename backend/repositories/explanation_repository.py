@@ -14,23 +14,27 @@ def get_by_id(
     return db.scalar(statement)
 
 
-def get_by_application(
+def get_by_contribution(
     db: Session,
-    application_id: int
+    contribution_id: int,
+    level: str | None = None,
 ) -> list[Explanation]:
     statement = select(Explanation).where(
-        Explanation.application_id == application_id
+        Explanation.contribution_id == contribution_id
     )
+    if level is not None:
+        statement = statement.where(Explanation.level == level)
+    statement = statement.order_by(Explanation.explanation_id)
     return list(db.scalars(statement).all())
 
 
-def get_by_application_and_level(
+def get_by_contribution_and_level(
     db: Session,
-    application_id: int,
+    contribution_id: int,
     level: str
 ) -> Explanation | None:
     statement = select(Explanation).where(
-        Explanation.application_id == application_id,
+        Explanation.contribution_id == contribution_id,
         Explanation.level == level
     )
     return db.scalar(statement)

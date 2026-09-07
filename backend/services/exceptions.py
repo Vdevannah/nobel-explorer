@@ -3,3 +3,7 @@ class ResourceNotFoundError(Exception):
         self.resource = resource
         self.identifier = identifier
         super().__init__(f"{resource} not found: {identifier}")
+
+
+class ServiceValidationError(Exception):
+    pass

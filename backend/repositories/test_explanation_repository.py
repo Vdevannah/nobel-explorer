@@ -6,15 +6,14 @@ from backend.models.category import Category
 from backend.models.prize import Prize
 from backend.models.laureate import Laureate
 from backend.models.laureate_prize import LaureatePrize
-from backend.models.discovery import Discovery
-from backend.models.application import Application
+from backend.models.contribution import Contribution
 from backend.models.explanation import Explanation
 
 from backend.repositories.explanation_repository import (
     create,
     get_by_id,
-    get_by_application,
-    get_by_application_and_level,
+    get_by_contribution,
+    get_by_contribution_and_level,
     update,
     delete,
 )
@@ -49,17 +48,13 @@ def test_explanation_repository():
             motivation="Temporary Nobel prize"
         )
 
-        discovery = Discovery(
+        contribution = Contribution(
+            laureate=laureate,
             laureate_prize=laureate_prize,
-            title="Test Discovery",
-            summary="Temporary discovery",
+            contribution_type="NOBEL_LINKED",
+            title="Test Contribution",
+            summary="Temporary contribution",
             significance="Temporary significance"
-        )
-
-        application = Application(
-            discovery=discovery,
-            title="Test Application",
-            description="Temporary application"
         )
 
         db.add(category)
@@ -77,7 +72,7 @@ def test_explanation_repository():
 
         for level, text, concepts in levels:
             explanation = Explanation(
-                application=application,
+                contribution=contribution,
                 level=level,
                 explanation_text=text,
                 key_concepts=concepts
@@ -109,20 +104,20 @@ def test_explanation_repository():
         )
 
         # READ ALL EXPLANATIONS FOR APPLICATION
-        application_explanations = get_by_application(
+        contribution_explanations = get_by_contribution(
             db,
-            application.application_id
+            contribution.contribution_id
         )
 
         print(
             "Explanations found for application:",
-            len(application_explanations)
+            len(contribution_explanations)
         )
 
         # READ SPECIFIC LEVEL
-        advanced_explanation = get_by_application_and_level(
+        advanced_explanation = get_by_contribution_and_level(
             db,
-            application.application_id,
+            contribution.contribution_id,
             "Advanced"
         )
 
@@ -153,7 +148,7 @@ def test_explanation_repository():
         try:
             with db.begin_nested():
                 duplicate_explanation = Explanation(
-                    application=application,
+                    contribution=contribution,
                     level="Simple",
                     explanation_text="Duplicate simple explanation",
                     key_concepts="duplicate concept"
@@ -165,7 +160,7 @@ def test_explanation_repository():
         assert duplicate_level_prevented
 
         print(
-            "Duplicate application/level prevented:",
+            "Duplicate contribution/level prevented:",
             duplicate_level_prevented
         )
 

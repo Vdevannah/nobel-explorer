@@ -14,26 +14,42 @@ def get_by_id(
     return db.scalar(statement)
 
 
-def get_by_discovery(
+def get_by_contribution(
     db: Session,
-    discovery_id: int
+    contribution_id: int,
+    level: str | None = None,
 ) -> list[QuizQuestion]:
     statement = select(QuizQuestion).where(
-        QuizQuestion.discovery_id == discovery_id
+        QuizQuestion.contribution_id == contribution_id
     )
+    if level is not None:
+        statement = statement.where(QuizQuestion.level == level)
+    statement = statement.order_by(QuizQuestion.question_id)
     return list(db.scalars(statement).all())
 
 
-def get_by_discovery_and_level(
+def get_by_contribution_and_level(
     db: Session,
-    discovery_id: int,
+    contribution_id: int,
     level: str
 ) -> list[QuizQuestion]:
     statement = select(QuizQuestion).where(
-        QuizQuestion.discovery_id == discovery_id,
+        QuizQuestion.contribution_id == contribution_id,
         QuizQuestion.level == level
     )
     return list(db.scalars(statement).all())
+
+
+def get_by_contribution_and_question(
+    db: Session,
+    contribution_id: int,
+    question_text: str,
+) -> QuizQuestion | None:
+    statement = select(QuizQuestion).where(
+        QuizQuestion.contribution_id == contribution_id,
+        QuizQuestion.question == question_text,
+    )
+    return db.scalar(statement)
 
 
 def create(

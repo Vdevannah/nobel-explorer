@@ -4,14 +4,14 @@ from backend.models.category import Category
 from backend.models.prize import Prize
 from backend.models.laureate import Laureate
 from backend.models.laureate_prize import LaureatePrize
-from backend.models.discovery import Discovery
+from backend.models.contribution import Contribution
 from backend.models.quiz_question import QuizQuestion
 
 from backend.repositories.quiz_question_repository import (
     create,
     get_by_id,
-    get_by_discovery,
-    get_by_discovery_and_level,
+    get_by_contribution,
+    get_by_contribution_and_level,
     update,
     delete,
 )
@@ -45,10 +45,12 @@ def test_quiz_question_repository():
             motivation="Temporary Nobel prize"
         )
 
-        discovery = Discovery(
+        contribution = Contribution(
+            laureate=laureate,
             laureate_prize=laureate_prize,
-            title="Test Quiz Discovery",
-            summary="Temporary discovery",
+            contribution_type="NOBEL_LINKED",
+            title="Test Quiz Contribution",
+            summary="Temporary contribution",
             significance="Temporary significance"
         )
 
@@ -57,7 +59,7 @@ def test_quiz_question_repository():
 
         # CREATE
         simple_question = QuizQuestion(
-            discovery=discovery,
+            contribution=contribution,
             level="Simple",
             question="What is the main idea?",
             choice_a="Choice A",
@@ -77,7 +79,7 @@ def test_quiz_question_repository():
         # questions to the persistent discovery before adding either child to
         # the session caused SQLAlchemy's relationship warning.
         advanced_question = QuizQuestion(
-            discovery=discovery,
+            contribution=contribution,
             level="Advanced",
             question="What is the advanced concept?",
             choice_a="Choice A",
@@ -111,20 +113,20 @@ def test_quiz_question_repository():
         )
 
         # READ ALL QUESTIONS FOR DISCOVERY
-        discovery_questions = get_by_discovery(
+        contribution_questions = get_by_contribution(
             db,
-            discovery.discovery_id
+            contribution.contribution_id
         )
 
         print(
             "Questions found for discovery:",
-            len(discovery_questions)
+            len(contribution_questions)
         )
 
         # READ BY DISCOVERY AND LEVEL
-        advanced_questions = get_by_discovery_and_level(
+        advanced_questions = get_by_contribution_and_level(
             db,
-            discovery.discovery_id,
+            contribution.contribution_id,
             "Advanced"
         )
 
