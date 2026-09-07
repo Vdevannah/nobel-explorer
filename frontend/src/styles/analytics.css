@@ -1,0 +1,522 @@
+.analytics-page {
+  min-height: calc(100vh - 5rem);
+  padding-bottom: var(--section-spacing);
+  background:
+    radial-gradient(circle at 90% 5%, color-mix(in srgb, var(--color-purple) 18%, transparent), transparent 28rem),
+    radial-gradient(circle at 10% 75%, color-mix(in srgb, var(--color-gold) 7%, transparent), transparent 25rem);
+}
+
+.analytics-hero {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-7);
+  padding-block: clamp(2.5rem, 6vw, 5rem) var(--space-7);
+}
+
+.analytics-hero h1 {
+  margin-bottom: var(--space-3);
+  font-size: clamp(2.6rem, 6vw, 5rem);
+  letter-spacing: -0.045em;
+}
+
+.analytics-hero p:last-child {
+  margin-bottom: 0;
+  color: var(--color-text-secondary);
+}
+
+.analytics-category-control {
+  display: grid;
+  min-width: min(100%, 19rem);
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.analytics-category-control select {
+  min-height: 3rem;
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.analytics-dashboard {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.analytics-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.analytics-metric,
+.analytics-panel,
+.analytics-state,
+.analytics-loading {
+  border: 1px solid var(--color-border);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface-elevated) 78%, transparent), var(--color-surface));
+  box-shadow: var(--shadow-card);
+}
+
+.analytics-metric {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-medium);
+}
+
+.analytics-metric-icon {
+  display: grid;
+  width: 2.75rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: var(--radius-small);
+  background: color-mix(in srgb, var(--color-purple) 20%, transparent);
+  font-size: 1.35rem;
+}
+
+.analytics-metric > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.analytics-metric p,
+.analytics-metric span {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.analytics-metric p {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analytics-metric strong {
+  color: var(--color-gold-light);
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.analytics-metric span {
+  font-size: 0.82rem;
+}
+
+.analytics-grid {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.analytics-grid-top {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.analytics-grid-trends {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.analytics-grid-details {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-panel {
+  min-width: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-medium);
+}
+
+.analytics-panel > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.analytics-panel h2 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-weight: 750;
+}
+
+.panel-kicker {
+  margin-bottom: var(--space-1);
+  color: var(--color-gold-light);
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.panel-total {
+  color: var(--color-purple-light);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.category-chart-layout {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.8fr) minmax(12rem, 1.2fr);
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.donut-chart {
+  position: relative;
+  display: grid;
+  width: min(100%, 13rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: 0 0 2rem color-mix(in srgb, var(--color-purple) 20%, transparent);
+}
+
+.donut-chart::after {
+  position: absolute;
+  width: 56%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color-surface);
+  content: "";
+}
+
+.donut-chart > span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  text-align: center;
+}
+
+.donut-chart strong {
+  font-size: 1.4rem;
+}
+
+.donut-chart small {
+  color: var(--color-text-secondary);
+}
+
+.analytics-legend,
+.ranked-bars {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analytics-legend li {
+  display: grid;
+  grid-template-columns: 0.65rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.analytics-legend i {
+  width: 0.65rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.analytics-legend strong {
+  color: var(--color-text-primary);
+}
+
+.analytics-legend small {
+  min-width: 3ch;
+  color: var(--color-gold-light);
+  font-weight: 700;
+  text-align: right;
+}
+
+.decade-chart {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.decade-chart svg {
+  display: block;
+  width: 100%;
+  min-width: 34rem;
+  height: auto;
+}
+
+.chart-axis {
+  stroke: var(--color-border);
+  stroke-width: 2;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--color-purple-light);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.chart-point {
+  fill: var(--color-gold-light);
+  stroke: var(--color-background-deep);
+  stroke-width: 3;
+}
+
+.decade-chart text {
+  fill: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.chart-point-value {
+  fill: var(--color-gold-light);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.age-bar-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--space-3);
+  height: 12rem;
+}
+
+.age-bar-column {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  height: 100%;
+  gap: var(--space-2);
+}
+
+.age-bar-value {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.age-bar-track {
+  display: flex;
+  align-items: end;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-small);
+  background: color-mix(in srgb, var(--color-purple-light) 11%, transparent);
+}
+
+.age-bar-track span {
+  display: block;
+  width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--color-gold), var(--color-purple));
+}
+
+.age-bar-label {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.ranked-bars em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  aspect-ratio: 1;
+  margin-right: var(--space-2);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-gold) 22%, transparent);
+  color: var(--color-gold-light);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.ranked-bars li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ranked-bars li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: 0.83rem;
+}
+
+.ranked-bars li > div span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranked-flag {
+  margin-right: var(--space-2);
+}
+
+.ranked-bars strong {
+  color: var(--color-text-primary);
+}
+
+.ranked-track {
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-purple-light) 11%, transparent);
+}
+
+.ranked-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-purple), var(--color-gold));
+}
+
+.analytics-empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.discovery-section {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface-elevated) 78%, transparent), var(--color-surface));
+  box-shadow: var(--shadow-card);
+}
+
+.discovery-section h2 {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-body);
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+
+.discovery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+}
+
+.discovery-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.discovery-card:hover {
+  border-color: var(--color-gold);
+  transform: translateY(-2px);
+}
+
+.discovery-card span {
+  font-size: 1.4rem;
+}
+
+.discovery-card p {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.did-you-know {
+  padding: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 40%, var(--color-border));
+  border-radius: var(--radius-medium);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-gold) 10%, transparent), var(--color-surface));
+  box-shadow: var(--shadow-card);
+}
+
+.did-you-know h2 {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-body);
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+
+.did-you-know p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.analytics-loading,
+.analytics-state {
+  padding: var(--space-6);
+  border-radius: var(--radius-medium);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.analytics-state {
+  max-width: 44rem;
+  margin: var(--space-8) auto;
+}
+
+.analytics-state h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+@media (max-width: 64rem) {
+  .analytics-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-grid-top,
+  .analytics-grid-trends,
+  .analytics-grid-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .age-bar-chart {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    height: auto;
+  }
+
+  .age-bar-column {
+    height: 9rem;
+  }
+}
+
+@media (max-width: 42rem) {
+  .analytics-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .analytics-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .category-chart-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .analytics-panel,
+  .analytics-metric {
+    padding: var(--space-4);
+  }
+}

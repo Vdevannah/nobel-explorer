@@ -1,0 +1,334 @@
+.site-header {
+  position: relative;
+  z-index: 10;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(9, 7, 26, 0.76);
+  backdrop-filter: blur(1rem);
+}
+
+.navbar {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-heading);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  letter-spacing: 0.015em;
+}
+
+.brand-mark {
+  display: grid;
+  width: 2.3rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(244, 214, 138, 0.7);
+  border-radius: 50%;
+  color: var(--color-background-deep);
+  background: linear-gradient(145deg, var(--color-gold-light), var(--color-gold));
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 0 1.5rem rgba(217, 174, 85, 0.2);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: clamp(var(--space-4), 3vw, var(--space-6));
+}
+
+.nav-link {
+  position: relative;
+  padding-block: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.nav-link-active {
+  color: var(--color-text-primary);
+}
+
+.nav-link-active::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-gold);
+  content: "";
+}
+
+.nav-link-disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.hero {
+  position: relative;
+  display: grid;
+  min-height: calc(100vh - 5rem);
+  align-items: center;
+  overflow: hidden;
+  padding-block: clamp(var(--space-7), 8vw, 7rem);
+}
+
+.hero-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(20rem, 0.92fr);
+  align-items: center;
+  gap: clamp(var(--space-7), 8vw, 7rem);
+}
+
+.hero-copy {
+  max-width: 43rem;
+}
+
+.eyebrow {
+  margin-bottom: var(--space-5);
+  color: var(--color-gold-light);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.eyebrow span {
+  margin-inline: var(--space-2);
+  color: var(--color-purple-light);
+}
+
+.hero h1 {
+  margin-bottom: var(--space-5);
+  font-size: clamp(3rem, 7vw, 5.6rem);
+  letter-spacing: -0.045em;
+}
+
+.hero h1 span {
+  display: block;
+  color: var(--color-gold-light);
+}
+
+.hero-description {
+  max-width: 38rem;
+  margin-bottom: var(--space-6);
+  color: var(--color-text-secondary);
+  font-size: clamp(1rem, 1.8vw, 1.18rem);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.button {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-weight: 750;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+}
+
+.button-primary {
+  color: #100c21;
+  background: linear-gradient(135deg, var(--color-gold-light), var(--color-gold));
+  box-shadow: 0 0.75rem 2rem rgba(217, 174, 85, 0.18);
+}
+
+.button-secondary {
+  border-color: rgba(182, 160, 255, 0.45);
+  color: var(--color-text-primary);
+  background: rgba(124, 77, 255, 0.1);
+}
+
+.discovery-card {
+  position: relative;
+  display: grid;
+  min-height: 30rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background:
+    linear-gradient(145deg, rgba(47, 34, 89, 0.74), rgba(19, 14, 43, 0.88));
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+}
+
+.discovery-card::before {
+  position: absolute;
+  width: 16rem;
+  height: 16rem;
+  border-radius: 50%;
+  background: var(--color-purple-glow);
+  filter: blur(3rem);
+  content: "";
+}
+
+.discovery-medallion {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 9.5rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid rgba(244, 214, 138, 0.68);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f7dd98, #a87927 72%);
+  box-shadow: 0 0 3rem rgba(217, 174, 85, 0.28);
+}
+
+.medallion-star {
+  color: #4b3210;
+  font-size: 3.3rem;
+}
+
+.orbit {
+  position: absolute;
+  border: 1px solid rgba(182, 160, 255, 0.27);
+  border-radius: 50%;
+  transform: rotate(-18deg);
+}
+
+.orbit-large {
+  width: 22rem;
+  height: 10rem;
+}
+
+.orbit-small {
+  width: 11rem;
+  height: 20rem;
+  transform: rotate(32deg);
+}
+
+.discovery-card-copy {
+  position: absolute;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  left: var(--space-6);
+  z-index: 2;
+}
+
+.discovery-card-copy p {
+  margin-bottom: var(--space-1);
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+}
+
+.discovery-card-copy span {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(1rem);
+  pointer-events: none;
+}
+
+.hero-glow-left {
+  top: 18%;
+  left: -16rem;
+  width: 30rem;
+  height: 30rem;
+  background: rgba(94, 44, 190, 0.15);
+}
+
+.hero-glow-right {
+  right: -12rem;
+  bottom: -15rem;
+  width: 34rem;
+  height: 34rem;
+  background: rgba(217, 174, 85, 0.08);
+}
+
+.not-found {
+  display: flex;
+  min-height: calc(100vh - 5rem);
+  max-width: 46rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding-block: var(--space-8);
+}
+
+.not-found h1 {
+  margin-bottom: var(--space-5);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.not-found p:not(.eyebrow) {
+  margin-bottom: var(--space-6);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 52rem) {
+  .navbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-block: var(--space-4);
+  }
+
+  .nav-links {
+    width: 100%;
+    gap: var(--space-5);
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+  }
+
+  .hero {
+    min-height: auto;
+  }
+
+  .hero-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .discovery-card {
+    min-height: 24rem;
+  }
+}
+
+@media (max-width: 32rem) {
+  .hero-actions,
+  .button {
+    width: 100%;
+  }
+
+  .discovery-card {
+    min-height: 21rem;
+  }
+
+  .orbit-large {
+    width: 18rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

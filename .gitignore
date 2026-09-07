@@ -17,3 +17,19 @@ __pycache__/
 
 # Test/cache files
 .pytest_cache/
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Generated audits, logs, and browser-review artifacts
+artifacts/
+frontend/einstein-*.png
+frontend/hierarchy-*.png
+frontend/home-page-review.png
+frontend/photoelectric-simple-desktop-review.png
+frontend/polish-*.png
+frontend/relativity-*-lesson.png
