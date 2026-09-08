@@ -1,11 +1,46 @@
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 
 from backend.database.connection import SessionLocal
 from backend.main import app
 from backend.repositories import laureate_repository
+from backend.schemas.laureate import (
+    LaureateDetailResponse,
+    LaureateSummaryResponse,
+)
 
 
 client = TestClient(app)
+
+
+def fake_laureate(**overrides) -> SimpleNamespace:
+    """A synthetic laureate-shaped object for schema-serialization tests.
+
+    Deliberately not a real database row: its id/name are obviously fake
+    so it can never collide with production data, and every field the
+    response schemas read via `from_attributes` is present. Callers
+    override only the fields their test cares about.
+    """
+    base = dict(
+        laureate_id=999001,
+        nobel_laureate_id="TEST-0001",
+        full_name="Test Laureate",
+        laureate_type="Person",
+        birth_country=None,
+        gender=None,
+        featured=False,
+        image_url=None,
+        image_source_url=None,
+        image_attribution=None,
+        image_license=None,
+        birth_date=None,
+        birth_city=None,
+        birth_state=None,
+        awards=[],
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
 
 
 def test_list_laureates_uses_default_pagination():
@@ -54,31 +89,30 @@ def test_list_laureates_rejects_invalid_offset():
 
 
 def test_laureate_image_provenance_fields_serialize_null():
-    list_response = client.get(
-        "/laureates",
-        params={"search": "A. Michael Spence"}
-    )
-
-    assert list_response.status_code == 200
-    summary = next(
-        laureate
-        for laureate in list_response.json()["items"]
-        if laureate["nobel_laureate_id"] == "745"
-    )
+    # This tests schema serialization behavior in isolation: when a
+    # laureate's image provenance fields are null, the response schemas
+    # must still include all four keys with null values rather than
+    # omitting them. It must NOT assert that any particular real Nobel
+    # laureate currently lacks an image -- image enrichment is expected
+    # to keep resolving records over time (by Phase 7.5O-C, all 1018
+    # laureates have an image_url), and pointing this test at "whichever
+    # laureate happens to be unresolved today" made it break every time
+    # enrichment legitimately made progress. A synthetic fake_laureate()
+    # object owns this test's data instead, so it can never be affected
+    # by production data changes.
+    laureate = fake_laureate()
     image_fields = {
         "image_url",
         "image_source_url",
         "image_attribution",
         "image_license"
     }
+
+    summary = LaureateSummaryResponse.model_validate(laureate).model_dump()
     assert image_fields.issubset(summary)
     assert all(summary[field] is None for field in image_fields)
 
-    detail_response = client.get(
-        f"/laureates/{summary['laureate_id']}"
-    )
-    assert detail_response.status_code == 200
-    detail = detail_response.json()
+    detail = LaureateDetailResponse.model_validate(laureate).model_dump()
     assert image_fields.issubset(detail)
     assert all(detail[field] is None for field in image_fields)
 

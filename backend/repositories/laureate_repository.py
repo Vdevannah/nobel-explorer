@@ -150,3 +150,19 @@ def create(db: Session, laureate: Laureate) -> Laureate:
     db.flush()
     db.refresh(laureate)
     return laureate
+
+
+def update_image_metadata(
+    db: Session,
+    laureate: Laureate,
+    image_url: str,
+    image_source_url: str,
+    image_attribution: str | None,
+    image_license: str,
+) -> Laureate:
+    laureate.image_url = image_url
+    laureate.image_source_url = image_source_url
+    laureate.image_attribution = image_attribution
+    laureate.image_license = image_license
+    db.flush()
+    return laureate
