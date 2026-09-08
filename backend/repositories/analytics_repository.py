@@ -1,4 +1,4 @@
-from sqlalchemy import select, func
+from sqlalchemy import case, select, func
 from sqlalchemy.orm import Session
 
 from backend.models.category import Category
@@ -23,6 +23,168 @@ def count_total_prizes(db: Session) -> int:
     )
 
     return db.scalar(statement) or 0
+
+
+def count_distinct_birth_countries(db: Session) -> int:
+    statement = (
+        select(
+            func.count(func.distinct(Laureate.birth_country))
+        )
+        .where(
+            Laureate.birth_country.is_not(None),
+            Laureate.laureate_type == "Person"
+        )
+    )
+
+    return db.scalar(statement) or 0
+
+
+def get_overall_gender_counts(db: Session) -> list[tuple[str, int]]:
+    statement = (
+        select(
+            Laureate.gender,
+            func.count(
+                func.distinct(Laureate.laureate_id)
+            ).label("laureate_count")
+        )
+        .where(
+            Laureate.laureate_type == "Person",
+            Laureate.gender.is_not(None)
+        )
+        .group_by(Laureate.gender)
+    )
+
+    return list(db.execute(statement).all())
+
+
+def get_top_birth_countries(
+    db: Session,
+    limit: int = 5
+) -> list[tuple[str, int]]:
+
+    statement = (
+        select(
+            Laureate.birth_country,
+            func.count(
+                func.distinct(Laureate.laureate_id)
+            ).label("laureate_count")
+        )
+        .join(
+            LaureatePrize,
+            LaureatePrize.laureate_id == Laureate.laureate_id
+        )
+        .where(
+            Laureate.birth_country.is_not(None),
+            Laureate.laureate_type == "Person"
+        )
+        .group_by(Laureate.birth_country)
+        .order_by(
+            func.count(
+                func.distinct(Laureate.laureate_id)
+            ).desc()
+        )
+        .limit(limit)
+    )
+
+    return list(db.execute(statement).all())
+
+
+def get_prize_counts_by_decade(
+    db: Session
+) -> list[tuple[int, int]]:
+
+    decade = (
+        func.floor(Prize.year / 10) * 10
+    ).label("decade")
+
+    statement = (
+        select(
+            decade,
+            func.count(
+                func.distinct(Prize.prize_id)
+            ).label("prize_count")
+        )
+        .group_by(decade)
+        .order_by(decade)
+    )
+
+    return list(db.execute(statement).all())
+
+
+def get_age_distribution(db: Session) -> list[tuple[str, int]]:
+    age_at_award = Prize.year - func.year(Laureate.birth_date)
+
+    age_group = case(
+        (age_at_award < 30, "<30"),
+        (age_at_award < 40, "30-39"),
+        (age_at_award < 50, "40-49"),
+        (age_at_award < 60, "50-59"),
+        (age_at_award < 70, "60-69"),
+        (age_at_award < 80, "70-79"),
+        else_="80+"
+    ).label("age_group")
+
+    statement = (
+        select(
+            age_group,
+            func.count(
+                func.distinct(Laureate.laureate_id)
+            ).label("laureate_count")
+        )
+        .join(
+            LaureatePrize,
+            LaureatePrize.prize_id == Prize.prize_id
+        )
+        .join(
+            Laureate,
+            Laureate.laureate_id == LaureatePrize.laureate_id
+        )
+        .where(
+            Laureate.laureate_type == "Person",
+            Laureate.birth_date.is_not(None)
+        )
+        .group_by(age_group)
+    )
+
+    return list(db.execute(statement).all())
+
+
+def get_gender_counts_by_era(
+    db: Session
+) -> list[tuple[str, str, int]]:
+
+    era = case(
+        (Prize.year <= 1950, "1901-1950"),
+        (Prize.year <= 1970, "1951-1970"),
+        (Prize.year <= 1990, "1971-1990"),
+        (Prize.year <= 2010, "1991-2010"),
+        else_="2011-present"
+    ).label("era")
+
+    statement = (
+        select(
+            era,
+            Laureate.gender,
+            func.count(
+                func.distinct(Laureate.laureate_id)
+            ).label("laureate_count")
+        )
+        .join(
+            LaureatePrize,
+            LaureatePrize.prize_id == Prize.prize_id
+        )
+        .join(
+            Laureate,
+            Laureate.laureate_id == LaureatePrize.laureate_id
+        )
+        .where(
+            Laureate.laureate_type == "Person",
+            Laureate.gender.is_not(None)
+        )
+        .group_by(era, Laureate.gender)
+    )
+
+    return list(db.execute(statement).all())
 
 
 def get_laureate_counts_by_category(

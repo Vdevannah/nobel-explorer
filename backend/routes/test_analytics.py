@@ -12,7 +12,13 @@ def test_analytics_summary_matches_service():
     response = client.get("/analytics/summary")
 
     assert response.status_code == 200
-    assert set(response.json()) == {"total_laureates", "total_prizes"}
+    assert set(response.json()) == {
+        "total_laureates",
+        "total_prizes",
+        "total_countries",
+        "women_laureates",
+        "women_percentage",
+    }
 
     db = SessionLocal()
     try:
@@ -119,6 +125,49 @@ def test_analytics_required_query_parameters():
         params={"category": "Chemistry"}
     ).status_code == 422
     assert client.get("/analytics/average-age").status_code == 422
+
+
+def test_top_countries_analytics():
+    response = client.get("/analytics/top-countries", params={"limit": 3})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert 0 < len(data) <= 3
+    assert all(set(row) == {"country", "laureate_count"} for row in data)
+    counts = [row["laureate_count"] for row in data]
+    assert counts == sorted(counts, reverse=True)
+
+
+def test_prizes_by_decade_analytics_are_ordered():
+    response = client.get("/analytics/prizes-by-decade")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data
+    assert all(set(row) == {"decade", "prize_count"} for row in data)
+    decades = [row["decade"] for row in data]
+    assert decades == sorted(decades)
+
+
+def test_age_distribution_analytics_sums_to_total():
+    response = client.get("/analytics/age-distribution")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [row["age_group"] for row in data] == [
+        "<30", "30-39", "40-49", "50-59", "60-69", "70-79", "80+"
+    ]
+    assert round(sum(row["percentage"] for row in data)) in (0, 100)
+
+
+def test_women_by_era_analytics():
+    response = client.get("/analytics/women-by-era")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data
+    assert all(set(row) == {"era", "percentage"} for row in data)
+    assert all(0 <= row["percentage"] <= 100 for row in data)
 
 
 def test_analytics_empty_list_result():

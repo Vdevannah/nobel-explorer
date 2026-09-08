@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from backend.repositories import analytics_repository
 from backend.schemas.analytics import (
+    AgeDistributionResponse,
     AnalyticsSummaryResponse,
     AverageAgeResponse,
     CategoryCountResponse,
@@ -9,15 +10,91 @@ from backend.schemas.analytics import (
     DecadeCountResponse,
     GenderCountResponse,
     InstitutionCountResponse,
+    PrizeDecadeCountResponse,
     StateCountResponse,
+    WomenEraResponse,
 )
 
 
+AGE_GROUP_ORDER = ["<30", "30-39", "40-49", "50-59", "60-69", "70-79", "80+"]
+ERA_ORDER = ["1901-1950", "1951-1970", "1971-1990", "1991-2010", "2011-present"]
+
+
 def get_summary(db: Session) -> AnalyticsSummaryResponse:
+    gender_counts = dict(analytics_repository.get_overall_gender_counts(db))
+    women_laureates = gender_counts.get("female", 0)
+    total_gendered = sum(gender_counts.values())
+    women_percentage = (
+        round(women_laureates / total_gendered * 100, 1)
+        if total_gendered else 0.0
+    )
+
     return AnalyticsSummaryResponse(
         total_laureates=analytics_repository.count_total_laureates(db),
-        total_prizes=analytics_repository.count_total_prizes(db)
+        total_prizes=analytics_repository.count_total_prizes(db),
+        total_countries=analytics_repository.count_distinct_birth_countries(db),
+        women_laureates=women_laureates,
+        women_percentage=women_percentage
     )
+
+
+def get_top_countries(
+    db: Session,
+    limit: int = 5
+) -> list[CountryCountResponse]:
+    results = analytics_repository.get_top_birth_countries(db, limit)
+    return [
+        CountryCountResponse(country=country, laureate_count=laureate_count)
+        for country, laureate_count in results
+    ]
+
+
+def get_prize_counts_by_decade(db: Session) -> list[PrizeDecadeCountResponse]:
+    results = analytics_repository.get_prize_counts_by_decade(db)
+    return [
+        PrizeDecadeCountResponse(decade=decade, prize_count=prize_count)
+        for decade, prize_count in results
+    ]
+
+
+def get_age_distribution(db: Session) -> list[AgeDistributionResponse]:
+    results = dict(analytics_repository.get_age_distribution(db))
+    total = sum(results.values())
+
+    return [
+        AgeDistributionResponse(
+            age_group=age_group,
+            laureate_count=results.get(age_group, 0),
+            percentage=(
+                round(results.get(age_group, 0) / total * 100, 1)
+                if total else 0.0
+            )
+        )
+        for age_group in AGE_GROUP_ORDER
+    ]
+
+
+def get_women_percentage_by_era(db: Session) -> list[WomenEraResponse]:
+    rows = analytics_repository.get_gender_counts_by_era(db)
+
+    totals: dict[str, int] = {}
+    female_totals: dict[str, int] = {}
+
+    for era, gender, laureate_count in rows:
+        totals[era] = totals.get(era, 0) + laureate_count
+        if gender == "female":
+            female_totals[era] = female_totals.get(era, 0) + laureate_count
+
+    return [
+        WomenEraResponse(
+            era=era,
+            percentage=round(
+                female_totals.get(era, 0) / totals[era] * 100, 1
+            )
+        )
+        for era in ERA_ORDER
+        if era in totals
+    ]
 
 
 def get_category_counts(db: Session) -> list[CategoryCountResponse]:

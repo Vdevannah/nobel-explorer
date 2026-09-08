@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.database.connection import get_db
 from backend.schemas.analytics import (
+    AgeDistributionResponse,
     AnalyticsSummaryResponse,
     AverageAgeResponse,
     CategoryCountResponse,
@@ -10,7 +11,9 @@ from backend.schemas.analytics import (
     DecadeCountResponse,
     GenderCountResponse,
     InstitutionCountResponse,
+    PrizeDecadeCountResponse,
     StateCountResponse,
+    WomenEraResponse,
 )
 from backend.services import analytics_service
 
@@ -24,7 +27,13 @@ router = APIRouter(
 @router.get(
     "/summary",
     response_model=AnalyticsSummaryResponse,
-    summary="Get Nobel Explorer totals"
+    summary="Get Nobel Explorer totals",
+    description=(
+        "Returns counts of all laureate rows (people and organizations), "
+        "Prize rows, distinct recorded birth countries among people, women "
+        "among people with known gender, and that count as a percentage of "
+        "people with known gender."
+    ),
 )
 def get_summary(db: Session = Depends(get_db)):
     return analytics_service.get_summary(db)
@@ -33,7 +42,11 @@ def get_summary(db: Session = Depends(get_db)):
 @router.get(
     "/laureates-by-category",
     response_model=list[CategoryCountResponse],
-    summary="Count laureates by category"
+    summary="Count distinct laureates by category",
+    description=(
+        "Counts each laureate once within a Nobel Prize category. A "
+        "laureate recognized in multiple categories appears once in each."
+    ),
 )
 def get_laureates_by_category(db: Session = Depends(get_db)):
     return analytics_service.get_category_counts(db)
@@ -44,8 +57,9 @@ def get_laureates_by_category(db: Session = Depends(get_db)):
     response_model=list[CountryCountResponse],
     summary="Count laureates by birth country",
     description=(
-        "Counts individual Laureates by their recorded birth_country "
-        "for a Nobel Prize category. This is birthplace-based."
+        "Counts person laureates (organizations excluded) by their "
+        "recorded birth_country for a Nobel Prize category. This is "
+        "birthplace-based, not nationality or citizenship."
     )
 )
 def get_birth_countries(
@@ -62,8 +76,8 @@ def get_birth_countries(
     response_model=list[StateCountResponse],
     summary="Count laureates by U.S. birth state",
     description=(
-        "Counts USA-born individual Laureates by full stored birth-state "
-        "name for a Nobel Prize category."
+        "Counts USA-born person laureates (organizations excluded) by "
+        "full stored birth-state name for a Nobel Prize category."
     )
 )
 def get_us_birth_states(
@@ -103,7 +117,11 @@ def get_institutions(
 @router.get(
     "/gender",
     response_model=list[GenderCountResponse],
-    summary="Count laureates by gender"
+    summary="Count people by gender within a category",
+    description=(
+        "Counts distinct person laureates with a recorded gender. "
+        "Organizations and records without gender are excluded."
+    ),
 )
 def get_gender(
     category: str = Query(
@@ -115,9 +133,76 @@ def get_gender(
 
 
 @router.get(
+    "/top-countries",
+    response_model=list[CountryCountResponse],
+    summary="Get top birth countries by laureate count",
+    description=(
+        "Ranks recorded birth countries for person laureates (organizations "
+        "excluded). Birth country is birthplace data, not nationality or "
+        "citizenship."
+    ),
+)
+def get_top_countries(
+    limit: int = Query(
+        default=5,
+        ge=1,
+        le=50,
+        description="Maximum number of countries to return"
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_top_countries(db, limit)
+
+
+@router.get(
+    "/prizes-by-decade",
+    response_model=list[PrizeDecadeCountResponse],
+    summary="Count Prize rows by award decade",
+    description=(
+        "Counts distinct Prize records grouped into 10-year decades "
+        "derived from each Prize's award year (e.g. 1987 falls in 1980)."
+    ),
+)
+def get_prizes_by_decade(db: Session = Depends(get_db)):
+    return analytics_service.get_prize_counts_by_decade(db)
+
+
+@router.get(
+    "/age-distribution",
+    response_model=list[AgeDistributionResponse],
+    summary="Get laureate age-at-award distribution",
+    description=(
+        "Buckets person laureates with a known birth date by approximate "
+        "age at award (Prize year minus birth year), across every "
+        "category. Organizations have no birth date and are excluded."
+    )
+)
+def get_age_distribution(db: Session = Depends(get_db)):
+    return analytics_service.get_age_distribution(db)
+
+
+@router.get(
+    "/women-by-era",
+    response_model=list[WomenEraResponse],
+    summary="Get women as a percentage of known-gender people by era",
+    description=(
+        "For each award-year era, divides distinct women laureates by "
+        "distinct person laureates with known gender. Organizations and "
+        "unknown-gender records are excluded."
+    ),
+)
+def get_women_by_era(db: Session = Depends(get_db)):
+    return analytics_service.get_women_percentage_by_era(db)
+
+
+@router.get(
     "/decades",
     response_model=list[DecadeCountResponse],
-    summary="Count laureates by award decade"
+    summary="Count distinct laureates by award decade",
+    description=(
+        "Counts each laureate once within each decade containing an "
+        "associated Prize. A repeat laureate may appear in multiple decades."
+    ),
 )
 def get_decades(db: Session = Depends(get_db)):
     return analytics_service.get_decade_counts(db)
@@ -129,7 +214,8 @@ def get_decades(db: Session = Depends(get_db)):
     summary="Get approximate average age at award",
     description=(
         "Calculates approximate age at award for a category using the "
-        "Prize award year and known Laureate birth dates."
+        "Prize award year and known birth dates of person laureates "
+        "(organizations excluded)."
     )
 )
 def get_average_age(

@@ -12,6 +12,7 @@ from backend.models.award_affiliation import AwardAffiliation
 from backend.repositories.analytics_repository import (
     count_total_laureates,
     count_total_prizes,
+    count_distinct_birth_countries,
     get_laureate_counts_by_category,
     get_laureate_counts_by_country_and_category,
     get_us_birth_state_counts_by_category,
@@ -19,6 +20,11 @@ from backend.repositories.analytics_repository import (
     get_gender_counts_by_category,
     get_laureate_counts_by_decade,
     get_average_age_at_award_by_category,
+    get_overall_gender_counts,
+    get_top_birth_countries,
+    get_prize_counts_by_decade,
+    get_age_distribution,
+    get_gender_counts_by_era,
 )
 
 
@@ -496,5 +502,113 @@ def test_analytics_repository():
         db.close()
 
 
+def test_analytics_repository_dashboard_metrics():
+    db = SessionLocal()
+
+    try:
+        baseline_countries = count_distinct_birth_countries(db)
+        baseline_gender = dict(get_overall_gender_counts(db))
+        baseline_decades = dict(get_prize_counts_by_decade(db))
+        baseline_ages = dict(get_age_distribution(db))
+        baseline_top_countries = dict(
+            get_top_birth_countries(db, limit=1000)
+        )
+
+        extra_category = Category(
+            name="Test Analytics Extra",
+            description="Temporary test category"
+        )
+
+        prize_a = Prize(year=1930, category=extra_category)
+        prize_b = Prize(year=1930, category=extra_category)
+
+        laureate_a = Laureate(
+            nobel_laureate_id="TEST-020",
+            full_name="Test Laureate Ten",
+            laureate_type="Person",
+            birth_date=date(1900, 1, 1),
+            birth_country="Testlandia",
+            gender="female",
+            featured=False
+        )
+
+        laureate_b = Laureate(
+            nobel_laureate_id="TEST-021",
+            full_name="Test Laureate Eleven",
+            laureate_type="Person",
+            birth_country="Testlandia",
+            gender="male",
+            featured=False
+        )
+
+        award_a = LaureatePrize(
+            laureate=laureate_a,
+            prize=prize_a,
+            prize_share="1/1"
+        )
+
+        award_b = LaureatePrize(
+            laureate=laureate_b,
+            prize=prize_b,
+            prize_share="1/1"
+        )
+
+        db.add_all([
+            extra_category,
+            prize_a,
+            prize_b,
+            laureate_a,
+            laureate_b,
+            award_a,
+            award_b,
+        ])
+        db.flush()
+
+        # Distinct birth countries increases by exactly one new country.
+
+        assert count_distinct_birth_countries(db) == baseline_countries + 1
+
+        # Overall gender counts include the new laureates.
+
+        gender_counts = dict(get_overall_gender_counts(db))
+        assert gender_counts["female"] == baseline_gender.get("female", 0) + 1
+        assert gender_counts["male"] == baseline_gender.get("male", 0) + 1
+
+        # Prize counts by decade include both new 1930s prizes.
+
+        decade_counts = dict(get_prize_counts_by_decade(db))
+        assert decade_counts[1930] == baseline_decades.get(1930, 0) + 2
+
+        # Age at award (1930 - 1900 = 30) lands in the 30-39 bucket.
+
+        age_counts = dict(get_age_distribution(db))
+        assert age_counts["30-39"] == baseline_ages.get("30-39", 0) + 1
+
+        # Testlandia now has two laureates and appears in top countries.
+
+        top_countries = dict(get_top_birth_countries(db, limit=1000))
+        assert top_countries["Testlandia"] == (
+            baseline_top_countries.get("Testlandia", 0) + 2
+        )
+
+        # 1901-1950 era gender split reflects the new laureates.
+
+        era_counts = get_gender_counts_by_era(db)
+        era_1901_1950 = {
+            gender: count
+            for era, gender, count in era_counts
+            if era == "1901-1950"
+        }
+        assert era_1901_1950["female"] >= 1
+        assert era_1901_1950["male"] >= 1
+
+        print("\nAnalytics repository dashboard metrics test passed.")
+
+    finally:
+        db.rollback()
+        db.close()
+
+
 if __name__ == "__main__":
     test_analytics_repository()
+    test_analytics_repository_dashboard_metrics()
