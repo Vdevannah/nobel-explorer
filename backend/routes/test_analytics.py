@@ -166,8 +166,23 @@ def test_women_by_era_analytics():
     assert response.status_code == 200
     data = response.json()
     assert data
-    assert all(set(row) == {"era", "percentage"} for row in data)
+    assert all(
+        set(row) == {"era", "percentage", "women_count", "known_gender_count"}
+        for row in data
+    )
     assert all(0 <= row["percentage"] <= 100 for row in data)
+
+    # The exposed counts must be internally consistent with the
+    # percentage they justify: known_gender_count is the denominator
+    # (organizations and unknown-gender laureates never enter it), and
+    # women_count is never negative or larger than that denominator.
+    for row in data:
+        assert row["known_gender_count"] > 0
+        assert 0 <= row["women_count"] <= row["known_gender_count"]
+        expected_percentage = round(
+            row["women_count"] / row["known_gender_count"] * 100, 1
+        )
+        assert row["percentage"] == expected_percentage
 
 
 def test_analytics_empty_list_result():

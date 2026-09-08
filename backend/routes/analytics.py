@@ -172,9 +172,12 @@ def get_prizes_by_decade(db: Session = Depends(get_db)):
     response_model=list[AgeDistributionResponse],
     summary="Get laureate age-at-award distribution",
     description=(
-        "Buckets person laureates with a known birth date by approximate "
-        "age at award (Prize year minus birth year), across every "
-        "category. Organizations have no birth date and are excluded."
+        "Buckets age-at-award OBSERVATIONS (one per award with a known "
+        "birth date) by approximate age (Prize year minus birth year), "
+        "across every category. A repeat winner contributes one "
+        "observation per award, so the same person may appear in more "
+        "than one bucket if their awards came at different ages. "
+        "Organizations have no birth date and are excluded."
     )
 )
 def get_age_distribution(db: Session = Depends(get_db)):
@@ -187,8 +190,12 @@ def get_age_distribution(db: Session = Depends(get_db)):
     summary="Get women as a percentage of known-gender people by era",
     description=(
         "For each award-year era, divides distinct women laureates by "
-        "distinct person laureates with known gender. Organizations and "
-        "unknown-gender records are excluded."
+        "distinct person laureates with known gender who were associated "
+        "with an award in that era, and returns both raw counts "
+        "(women_count, known_gender_count) alongside the percentage for "
+        "transparency. This is NOT a percentage of prizes awarded to "
+        "women. Organizations and unknown-gender records are excluded "
+        "entirely -- never counted as male or female."
     ),
 )
 def get_women_by_era(db: Session = Depends(get_db)):
@@ -215,7 +222,10 @@ def get_decades(db: Session = Depends(get_db)):
     description=(
         "Calculates approximate age at award for a category using the "
         "Prize award year and known birth dates of person laureates "
-        "(organizations excluded)."
+        "(organizations excluded). Averages over age-at-award "
+        "observations, one per award, so a repeat winner in this "
+        "category contributes one observation per award rather than "
+        "being collapsed to a single age."
     )
 )
 def get_average_age(

@@ -58,6 +58,13 @@ def get_prize_counts_by_decade(db: Session) -> list[PrizeDecadeCountResponse]:
 
 
 def get_age_distribution(db: Session) -> list[AgeDistributionResponse]:
+    # `results` holds one age-at-award OBSERVATION count per bucket, not
+    # a distinct-laureate count: a repeat winner with a known birth date
+    # contributes one observation per award, so the same person can
+    # appear in more than one bucket if their awards came at different
+    # ages. `laureate_count` is kept as the field name for frontend
+    # backward compatibility, but see get_age_distribution() in
+    # analytics_repository.py for the exact counting method.
     results = dict(analytics_repository.get_age_distribution(db))
     total = sum(results.values())
 
@@ -75,6 +82,11 @@ def get_age_distribution(db: Session) -> list[AgeDistributionResponse]:
 
 
 def get_women_percentage_by_era(db: Session) -> list[WomenEraResponse]:
+    # `totals[era]` is the denominator: distinct person laureates with a
+    # recorded gender who were associated with an award in that era.
+    # Organizations and unknown-gender records never enter this sum (the
+    # repository excludes them before grouping), so they can never be
+    # implicitly counted as male or female.
     rows = analytics_repository.get_gender_counts_by_era(db)
 
     totals: dict[str, int] = {}
@@ -90,7 +102,9 @@ def get_women_percentage_by_era(db: Session) -> list[WomenEraResponse]:
             era=era,
             percentage=round(
                 female_totals.get(era, 0) / totals[era] * 100, 1
-            )
+            ),
+            women_count=female_totals.get(era, 0),
+            known_gender_count=totals[era]
         )
         for era in ERA_ORDER
         if era in totals

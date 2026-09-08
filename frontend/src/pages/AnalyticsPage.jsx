@@ -84,8 +84,8 @@ function CategoryDonut({ data }) {
 
   return (
     <div className="category-chart-layout">
-      <div className="donut-chart" style={{ background: `conic-gradient(${segments.join(", ")})` }} aria-label={`Category distribution across ${total} laureate counts`} role="img">
-        <span><strong>{total}</strong><small>Total prizes</small></span>
+      <div className="donut-chart" style={{ background: `conic-gradient(${segments.join(", ")})` }} aria-label={`${total} distinct laureates across all categories`} role="img">
+        <span><strong>{total}</strong><small>Total laureates</small></span>
       </div>
       <ul className="analytics-legend">
         {data.map((item, index) => (
@@ -101,7 +101,7 @@ function CategoryDonut({ data }) {
   );
 }
 
-function TrendLineChart({ data, xKey, yKey, formatX, formatY, ariaLabel, emptyMessage }) {
+function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ariaLabel, emptyMessage }) {
   const width = 720;
   const height = 230;
   const maximum = Math.max(...data.map((item) => item[yKey]), 1);
@@ -121,7 +121,7 @@ function TrendLineChart({ data, xKey, yKey, formatX, formatY, ariaLabel, emptyMe
         {points.map((point, index) => (
           <g key={point[xKey]}>
             <circle className="chart-point" cx={point.x} cy={point.y} r="5">
-              <title>{formatX(point[xKey])}: {formatY(point[yKey])}</title>
+              <title>{formatTooltip ? formatTooltip(point) : `${formatX(point[xKey])}: ${formatY(point[yKey])}`}</title>
             </circle>
             <text x={point.x} y={point.y - 14} textAnchor="middle" className="chart-point-value">{formatY(point[yKey])}</text>
             {(data.length <= 6 || index % 2 === 0 || index === points.length - 1) && (
@@ -140,7 +140,7 @@ function AgeBarChart({ data }) {
   if (!data.length) return <p className="analytics-empty">No age data is available.</p>;
 
   return (
-    <div className="age-bar-chart" role="img" aria-label="Distribution of laureates by age group at award">
+    <div className="age-bar-chart" role="img" aria-label="Distribution of award-age observations by approximate age group; a repeat winner may contribute more than one observation">
       {data.map((item) => (
         <div className="age-bar-column" key={item.age_group}>
           <span className="age-bar-value">{item.percentage}%</span>
@@ -268,7 +268,7 @@ function AnalyticsPage() {
         <main className="analytics-dashboard container">
           <section className="analytics-metrics" aria-label="Nobel Explorer totals">
             <MetricCard icon="🏆" label="Nobel Prizes" value={summary.total_prizes.toLocaleString()} detail="Awarded since 1901" />
-            <MetricCard icon="👥" label="Laureates" value={summary.total_laureates.toLocaleString()} detail="Individuals honored" />
+            <MetricCard icon="👥" label="Laureates" value={summary.total_laureates.toLocaleString()} detail="Laureates honored (people and organizations)" />
             <MetricCard icon="🌍" label="Countries" value={summary.total_countries.toLocaleString()} detail="Represented" />
             <MetricCard icon="♀" label="Women Laureates" value={summary.women_laureates.toLocaleString()} detail={`${summary.women_percentage}% of total`} />
           </section>
@@ -279,8 +279,8 @@ function AnalyticsPage() {
           </section>
 
           <section className="analytics-grid analytics-grid-trends">
-            <article className="analytics-panel" id="women-trend"><header><div><p className="panel-kicker">1901–present</p><h2>Women in Nobel History</h2></div></header><TrendLineChart data={womenByEra} xKey="era" yKey="percentage" formatX={(era) => era} formatY={(percentage) => `${percentage}%`} ariaLabel="Percentage of prizes awarded to women by era" emptyMessage="No gender history data is available." /></article>
-            <article className="analytics-panel" id="age-distribution"><header><div><p className="panel-kicker">All categories</p><h2>Age at the Time of Award</h2></div></header><AgeBarChart data={ageDistribution} /></article>
+            <article className="analytics-panel" id="women-trend"><header><div><p className="panel-kicker">1901–present</p><h2>Women in Nobel History</h2><p className="panel-note">Share of women among laureates with known gender, by era. Organizations excluded.</p></div></header><TrendLineChart data={womenByEra} xKey="era" yKey="percentage" formatX={(era) => era} formatY={(percentage) => `${percentage}%`} formatTooltip={(point) => `${point.era}: ${point.percentage}% (${point.women_count} of ${point.known_gender_count} known-gender laureates)`} ariaLabel="Percentage of known-gender person laureates who are women, by era" emptyMessage="No gender history data is available." /></article>
+            <article className="analytics-panel" id="age-distribution"><header><div><p className="panel-kicker">All categories</p><h2>Age at the Time of Award</h2><p className="panel-note">Approximate age (award year minus birth year). Repeat winners may appear in more than one group.</p></div></header><AgeBarChart data={ageDistribution} /></article>
           </section>
 
           <section className="analytics-grid analytics-grid-single" id="top-countries">

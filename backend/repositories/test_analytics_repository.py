@@ -609,6 +609,169 @@ def test_analytics_repository_dashboard_metrics():
         db.close()
 
 
+def test_analytics_repository_hardened_demographic_and_age_methodology():
+    """Phase 10C/10F: age-at-award OBSERVATIONS (one per award with a
+    known birth date, not one per distinct laureate) for age-distribution
+    and average-age; organizations and unknown-gender records must never
+    enter gender/age denominators; a repeat winner may legitimately
+    contribute to two different eras and two different age buckets.
+    """
+    db = SessionLocal()
+
+    try:
+        baseline_ages = dict(get_age_distribution(db))
+
+        category = Category(
+            name="Test Hardened Methodology",
+            description="Temporary test category"
+        )
+
+        # Two prizes, far enough apart that the same person's age-at-award
+        # falls in two different buckets (<30 vs 40-49), and far enough
+        # apart in year that they land in two different eras.
+        early_prize = Prize(year=1935, category=category)  # -> era 1901-1950
+        late_prize = Prize(year=1995, category=category)   # -> era 1991-2010
+
+        # Born 1910: age at 1935 award = 25 (<30 bucket);
+        #            age at 1995 award = 85 (80+ bucket).
+        repeat_winner = Laureate(
+            nobel_laureate_id="TEST-030",
+            full_name="Test Repeat Winner",
+            laureate_type="Person",
+            birth_date=date(1910, 1, 1),
+            birth_country="Sweden",
+            gender="female",
+            featured=False
+        )
+
+        # An organization sharing the same category and a real prize --
+        # must never appear in age or gender counts (no birth date, no
+        # gender to speak of, and explicitly typed "Organization").
+        organization_laureate = Laureate(
+            nobel_laureate_id="TEST-031",
+            full_name="Test Analytics Organization",
+            laureate_type="Organization",
+            birth_country=None,
+            gender=None,
+            featured=False
+        )
+
+        # A person with no recorded gender -- must be excluded from the
+        # gender-by-era denominator, never silently treated as a gender.
+        unknown_gender_laureate = Laureate(
+            nobel_laureate_id="TEST-032",
+            full_name="Test Unknown Gender",
+            laureate_type="Person",
+            birth_date=date(1930, 1, 1),
+            birth_country="Sweden",
+            gender=None,
+            featured=False
+        )
+
+        early_award_repeat = LaureatePrize(
+            laureate=repeat_winner,
+            prize=early_prize,
+            prize_share="1/1"
+        )
+        late_award_repeat = LaureatePrize(
+            laureate=repeat_winner,
+            prize=late_prize,
+            prize_share="1/1"
+        )
+        org_award = LaureatePrize(
+            laureate=organization_laureate,
+            prize=early_prize,
+            prize_share="1/1"
+        )
+        unknown_gender_award = LaureatePrize(
+            laureate=unknown_gender_laureate,
+            prize=early_prize,
+            prize_share="1/1"
+        )
+
+        db.add_all([
+            category,
+            early_prize,
+            late_prize,
+            repeat_winner,
+            organization_laureate,
+            unknown_gender_laureate,
+            early_award_repeat,
+            late_award_repeat,
+            org_award,
+            unknown_gender_award,
+        ])
+        db.flush()
+
+        # ---- Age distribution: two OBSERVATIONS for the repeat winner
+        # ---- alone (not one collapsed laureate), the organization
+        # ---- contributes zero (no birth date), and the unknown-gender
+        # ---- laureate (age 5 at the 1935 award -- gender is irrelevant
+        # ---- to this endpoint) also lands in "<30" alongside her.
+
+        age_counts = dict(get_age_distribution(db))
+        assert age_counts["<30"] == baseline_ages.get("<30", 0) + 2
+        assert age_counts["80+"] == baseline_ages.get("80+", 0) + 1
+
+        # ---- Average age at award: averages every person observation in
+        # ---- this category (25 and 85 for the repeat winner, 5 for the
+        # ---- unknown-gender laureate -- gender is irrelevant here, only
+        # ---- laureate_type and birth_date matter) rather than collapsing
+        # ---- the repeat winner to a single age. The organization's
+        # ---- award contributes nothing (no birth date).
+
+        average_age = get_average_age_at_award_by_category(
+            db,
+            "Test Hardened Methodology"
+        )
+        assert average_age is not None
+        assert round(average_age, 1) == round((25 + 85 + 5) / 3, 1)
+
+        # ---- Gender by era: the same repeat winner is counted once in
+        # ---- EACH of the two eras her awards fall into (distinct per
+        # ---- era, not collapsed across eras); the organization and the
+        # ---- unknown-gender laureate never appear in either era's
+        # ---- gender breakdown at all.
+
+        era_counts = get_gender_counts_by_era(db)
+        era_lookup = {
+            (era, gender): count for era, gender, count in era_counts
+        }
+        assert era_lookup.get(("1901-1950", "female"), 0) >= 1
+        assert era_lookup.get(("1991-2010", "female"), 0) >= 1
+
+        genders_seen_in_1901_1950 = {
+            gender for era, gender, _ in era_counts if era == "1901-1950"
+        }
+        assert None not in genders_seen_in_1901_1950
+
+        # ---- Gender by category: the organization and the
+        # ---- unknown-gender laureate are excluded from the category's
+        # ---- gender denominator entirely.
+
+        category_gender_counts = dict(
+            get_gender_counts_by_category(db, "Test Hardened Methodology")
+        )
+        assert category_gender_counts.get("female") == 1
+        assert sum(category_gender_counts.values()) == 1
+
+        # ---- Category counts: the organization IS still counted in
+        # ---- plain laureate-by-category totals (that metric is not
+        # ---- gender- or age-restricted) -- 3 distinct laureates total.
+
+        category_counts = dict(get_laureate_counts_by_category(db))
+        assert category_counts["Test Hardened Methodology"] == 3
+
+        print(
+            "\nAnalytics repository hardened methodology test passed."
+        )
+
+    finally:
+        db.rollback()
+        db.close()
+
+
 if __name__ == "__main__":
     test_analytics_repository()
     test_analytics_repository_dashboard_metrics()
+    test_analytics_repository_hardened_demographic_and_age_methodology()

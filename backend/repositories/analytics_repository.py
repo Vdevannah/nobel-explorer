@@ -112,6 +112,15 @@ def get_prize_counts_by_decade(
 
 
 def get_age_distribution(db: Session) -> list[tuple[str, int]]:
+    """Bucket age-at-award OBSERVATIONS (one per LaureatePrize row with a
+    known birth date), not distinct laureates. A repeat winner with a
+    known birth date contributes one observation per award, and those
+    observations may land in different age groups if the awards came at
+    different ages -- this is intentional (Phase 10F methodology), not a
+    double-count bug. Counting `LaureatePrize.laureate_prize_id` (the
+    join's own primary key) rather than `Laureate.laureate_id` is what
+    makes each award count as its own observation.
+    """
     age_at_award = Prize.year - func.year(Laureate.birth_date)
 
     age_group = case(
@@ -128,8 +137,8 @@ def get_age_distribution(db: Session) -> list[tuple[str, int]]:
         select(
             age_group,
             func.count(
-                func.distinct(Laureate.laureate_id)
-            ).label("laureate_count")
+                func.distinct(LaureatePrize.laureate_prize_id)
+            ).label("observation_count")
         )
         .join(
             LaureatePrize,
@@ -152,7 +161,13 @@ def get_age_distribution(db: Session) -> list[tuple[str, int]]:
 def get_gender_counts_by_era(
     db: Session
 ) -> list[tuple[str, str, int]]:
-
+    """Count DISTINCT person laureates with known gender per era, not
+    award observations: a laureate who won twice within the same era is
+    still one person in that era's denominator. Organizations and
+    unknown-gender records are excluded entirely (never counted, and
+    never treated as a gender). This is the locked women-by-era
+    methodology from Phase 10C/10F and is unchanged from prior phases.
+    """
     era = case(
         (Prize.year <= 1950, "1901-1950"),
         (Prize.year <= 1970, "1951-1970"),
@@ -425,7 +440,14 @@ def get_average_age_at_award_by_category(
     db: Session,
     category_name: str
 ) -> float | None:
-
+    """Average age-at-award OBSERVATIONS (approximate: Prize.year minus
+    birth year), one per LaureatePrize row with a known birth date. No
+    laureate-level DISTINCT is applied here, so a repeat winner in this
+    category contributes one observation per award -- consistent with
+    the age-distribution methodology in get_age_distribution().
+    Organizations are excluded via laureate_type; missing birth dates
+    are excluded via the IS NOT NULL filter below.
+    """
     age_at_award = (
         Prize.year - func.year(Laureate.birth_date)
     )

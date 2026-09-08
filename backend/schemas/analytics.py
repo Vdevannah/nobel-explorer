@@ -58,3 +58,5 @@ class AgeDistributionResponse(BaseModel):
 class WomenEraResponse(BaseModel):
     era: str
     percentage: float
+    women_count: int
+    known_gender_count: int

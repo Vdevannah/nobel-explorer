@@ -164,6 +164,17 @@
   text-transform: uppercase;
 }
 
+/* Compact methodology note under a panel's h2 -- used sparingly, only
+   where a metric's meaning genuinely needs a one-line disclaimer (e.g.
+   "approximate age", "known-gender denominator"). */
+.panel-note {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
 .panel-total {
   color: var(--color-purple-light);
   font-size: 1.35rem;
