@@ -186,7 +186,7 @@
 
 .category-section {
   padding-top: var(--space-3);
-  padding-bottom: clamp(1rem, 2vw, 1.5rem);
+  padding-bottom: clamp(0.35rem, 1vw, 0.75rem);
   background: linear-gradient(
     180deg,
     transparent,
@@ -197,7 +197,7 @@
 
 .featured-section {
   padding-top: var(--space-3);
-  padding-bottom: clamp(1rem, 2vw, 1.5rem);
+  padding-bottom: clamp(0.35rem, 1vw, 0.75rem);
 }
 
 .category-selector-grid {
@@ -377,10 +377,9 @@
 .featured-card {
   display: flex;
   width: min(100%, 18rem);
-  aspect-ratio: 1;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-2);
   padding: var(--space-4);
   overflow: hidden;
@@ -390,20 +389,28 @@
   box-shadow: var(--shadow-card);
 }
 
-.featured-portrait,
+/* The 18rem width above is sized to sit beside the taller "Pick a
+   Prize" panel in the desktop two-column layout. Once .home-top-grid
+   stacks to one column (see the matching breakpoint below), that same
+   fixed width stayed narrow inside a full-width row, leaving a large
+   empty gap beside it -- this row layout instead fills the width and
+   sizes to its actual content. */
+
+.featured-story-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 8 / 5;
+  flex-shrink: 0;
+  border-radius: var(--radius-medium);
+  object-fit: cover;
+  object-position: 50% 28%;
+}
+
 .portrait-placeholder {
   width: 5rem;
   height: 5rem;
   flex-shrink: 0;
   border-radius: var(--radius-medium);
-}
-
-.featured-portrait {
-  display: block;
-  object-fit: cover;
-}
-
-.portrait-placeholder {
   position: relative;
   display: flex;
   align-items: center;
@@ -477,7 +484,7 @@
   padding: 0;
   color: var(--color-gold-light);
   background: transparent;
-  cursor: default;
+  cursor: pointer;
   font-size: 0.88rem;
   font-weight: 750;
 }
@@ -489,7 +496,8 @@
 
 .journey-section {
   overflow: hidden;
-  padding-block: clamp(1.5rem, 3vw, 2.5rem);
+  padding-top: clamp(0.4rem, 1.3vw, 1rem);
+  padding-bottom: clamp(1.5rem, 3vw, 2.5rem);
 }
 
 .journey-path {
@@ -645,6 +653,29 @@
   .home-hero-layout,
   .home-top-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .featured-card {
+    width: 100%;
+    aspect-ratio: auto;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .featured-story-image,
+  .portrait-placeholder {
+    width: 4rem;
+    height: 4rem;
+    aspect-ratio: 1;
+  }
+
+  .featured-story-image {
+    object-position: 50% 25%;
+  }
+
+  .featured-copy {
+    min-width: 0;
+    flex: 1;
   }
 
   .level-grid {

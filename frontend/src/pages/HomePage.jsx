@@ -2,6 +2,7 @@ import CategoryExplorer from "../components/home/CategoryExplorer";
 import FeaturedLaureate from "../components/home/FeaturedLaureate";
 import HeroSection from "../components/home/HeroSection";
 import LearningJourney from "../components/home/LearningJourney";
+import einsteinFeatured from "../assets/einstein-featured.png";
 
 function HomePage() {
   return (
@@ -13,7 +14,9 @@ function HomePage() {
           name="Albert Einstein"
           category="Physics"
           year={1921}
-          description="Explore the story and Nobel-recognized work of Albert Einstein."
+          description="Discover Einstein's Nobel-winning work and explore the science behind the photoelectric effect."
+          imageUrl={einsteinFeatured}
+          laureateId={249}
         />
       </div>
       <LearningJourney />

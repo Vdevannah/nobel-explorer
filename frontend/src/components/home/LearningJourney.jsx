@@ -36,7 +36,7 @@ function LearningJourney() {
         <div className="level-preview" aria-labelledby="levels-title">
           <div className="level-preview-copy">
             <p className="eyebrow">Learn your way</p>
-            <h3 id="levels-title">Choose the depth that works for you</h3>
+            <h3 id="levels-title">Choose your learning level</h3>
           </div>
           <div className="level-grid">
             {learningLevels.map((level) => (
