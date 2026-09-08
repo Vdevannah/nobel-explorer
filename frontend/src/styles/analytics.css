@@ -25,6 +25,26 @@
   color: var(--color-text-secondary);
 }
 
+/* Sits directly above the category-required deep-dive panels it
+   controls, rather than in the page hero -- keeps it visually distinct
+   from the unrelated, optional Category field in .analytics-filter-bar
+   above, which narrows the whole dashboard instead of picking one
+   category to explore in depth. */
+.analytics-subsection-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.analytics-subsection-header h2 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-weight: 750;
+}
+
 .analytics-category-control {
   display: grid;
   min-width: min(100%, 19rem);
@@ -70,6 +90,19 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* The shared .button has no disabled treatment of its own, so a
+   disabled Reset looked identical to an active one -- the opposite of
+   "clearly available when filters are active." */
+.analytics-filter-actions .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+.analytics-filter-actions .button:disabled:hover {
+  transform: none;
 }
 
 .analytics-filter-error {
@@ -313,6 +346,11 @@
   font-size: 0.78rem;
 }
 
+.analytics-legend-inline strong {
+  color: var(--color-gold-light);
+  font-weight: 700;
+}
+
 .analytics-legend-inline i {
   width: 0.6rem;
   aspect-ratio: 1;
@@ -492,7 +530,12 @@
   gap: var(--space-3);
 }
 
-.discovery-card {
+/* Named distinctly from the unrelated Home-page ".discovery-card"
+   (components.css) -- that class carries min-height: 30rem, decorative
+   glow, and absolute-positioned copy for a completely different hero
+   card. Sharing its name here was accidentally inflating every question
+   link to 480px tall with a stray blurred circle behind it. */
+.discovery-question-card {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4);
@@ -503,16 +546,17 @@
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
-.discovery-card:hover {
+.discovery-question-card:hover,
+.discovery-question-card:focus-visible {
   border-color: var(--color-gold);
   transform: translateY(-2px);
 }
 
-.discovery-card span {
+.discovery-question-card span {
   font-size: 1.4rem;
 }
 
-.discovery-card p {
+.discovery-question-card p {
   margin: 0;
   color: var(--color-text-primary);
   font-size: 0.85rem;

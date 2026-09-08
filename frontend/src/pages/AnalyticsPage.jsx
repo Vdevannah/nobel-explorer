@@ -132,6 +132,15 @@ function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ari
           </g>
         ))}
       </svg>
+      {/* Concise accessible data summary: the SVG's role="img" makes its
+          <text> labels opaque to screen readers, so the exact values are
+          restated here as plain text instead of only being visible or
+          only reachable via mouse-hover <title> tooltips. */}
+      <ul className="visually-hidden">
+        {points.map((point) => (
+          <li key={point[xKey]}>{formatX(point[xKey])}: {formatY(point[yKey])}</li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -150,14 +159,22 @@ function CategoryTrendChart({ data, categoryColors, emptyMessage }) {
   const xFor = (index) => (decades.length === 1 ? width / 2 : 20 + (index / (decades.length - 1)) * (width - 40));
   const yFor = (count) => height - 32 - (count / maximum) * (height - 60);
 
-  const series = categoryNames.map((category) => ({
-    category,
-    color: categoryColors[category] || "#7c4dff",
-    points: decades.map((decade, index) => {
+  const series = categoryNames.map((category) => {
+    const points = decades.map((decade, index) => {
       const count = lookup.get(`${decade}|${category}`) || 0;
       return { decade, count, x: xFor(index), y: yFor(count) };
-    }),
-  }));
+    });
+    return {
+      category,
+      color: categoryColors[category] || "#7c4dff",
+      points,
+      // Shown in the legend so the exact figure isn't conveyed by line
+      // color/position alone, and so screen readers (which can't read
+      // an svg role="img"'s internal <text>/<title> content) still get
+      // a concrete number for each category via this plain-text legend.
+      totalCount: points.reduce((sum, point) => sum + point.count, 0),
+    };
+  });
 
   return (
     <div className="decade-chart">
@@ -182,8 +199,9 @@ function CategoryTrendChart({ data, categoryColors, emptyMessage }) {
       <ul className="analytics-legend-inline">
         {series.map((line) => (
           <li key={line.category}>
-            <i style={{ background: line.color }} />
+            <i style={{ background: line.color }} aria-hidden="true" />
             <span>{line.category}</span>
+            <strong>{line.totalCount}</strong>
           </li>
         ))}
       </ul>
@@ -197,11 +215,14 @@ function AgeBarChart({ data }) {
   if (!data.length) return <p className="analytics-empty">No age data is available.</p>;
 
   return (
-    <div className="age-bar-chart" role="img" aria-label="Distribution of award-age observations by approximate age group; a repeat winner may contribute more than one observation">
+    // role="group" (not "img"): the percentage/age-group text below is
+    // real, meaningful content -- role="img" would present this as one
+    // opaque image and hide that text from screen readers entirely.
+    <div className="age-bar-chart" role="group" aria-label="Distribution of award-age observations by approximate age group; a repeat winner may contribute more than one observation">
       {data.map((item) => (
         <div className="age-bar-column" key={item.age_group}>
           <span className="age-bar-value">{item.percentage}%</span>
-          <span className="age-bar-track">
+          <span className="age-bar-track" aria-hidden="true">
             <span style={{ height: `${(item.percentage / maximum) * 100}%` }} />
           </span>
           <span className="age-bar-label">{item.age_group}</span>
@@ -217,7 +238,7 @@ function DiscoveryQuestions() {
       <h2>🔎 What can you discover from the data?</h2>
       <div className="discovery-grid">
         {DISCOVERY_QUESTIONS.map((item) => (
-          <a className="discovery-card" href={item.target} key={item.question}>
+          <a className="discovery-question-card" href={item.target} key={item.question}>
             <span aria-hidden="true">{item.icon}</span>
             <p>{item.question}</p>
           </a>
@@ -363,7 +384,6 @@ function AnalyticsPage() {
           <h1>Nobel Analytics ✨</h1>
           <p>Be inspired by a century of discovery, told through the numbers.</p>
         </div>
-        <label className="analytics-category-control">Explore category<select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)} disabled={!categories.length}>{categories.map((category) => <option key={category.category_id} value={category.name}>{category.name}</option>)}</select></label>
       </header>
 
       <section className="analytics-filter-bar container" aria-label="Filter dashboard totals and trends">
@@ -418,6 +438,19 @@ function AnalyticsPage() {
 
           <section className="analytics-grid analytics-grid-single" id="top-countries">
             <article className="analytics-panel"><header><div><p className="panel-kicker">Birthplace</p><h2>Top Countries by Laureates</h2></div></header><RankedBars data={topCountries} labelKey="country" emptyMessage="No country data is available." limit={5} showRank showFlag /></article>
+          </section>
+
+          <section className="analytics-subsection-header">
+            <div>
+              <p className="panel-kicker">Category deep-dive</p>
+              <h2>Explore One Category in Depth</h2>
+            </div>
+            <label className="analytics-category-control" htmlFor="deep-dive-category">
+              Category
+              <select id="deep-dive-category" value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)} disabled={!categories.length}>
+                {categories.map((category) => <option key={category.category_id} value={category.name}>{category.name}</option>)}
+              </select>
+            </label>
           </section>
 
           {categoryStatus === "loading" && <div className="analytics-loading" role="status">Loading {selectedCategory} insights…</div>}
