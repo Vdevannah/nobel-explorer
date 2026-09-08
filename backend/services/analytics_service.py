@@ -6,6 +6,7 @@ from backend.schemas.analytics import (
     AnalyticsSummaryResponse,
     AverageAgeResponse,
     CategoryCountResponse,
+    CategoryDecadeCountResponse,
     CountryCountResponse,
     DecadeCountResponse,
     GenderCountResponse,
@@ -14,10 +15,31 @@ from backend.schemas.analytics import (
     StateCountResponse,
     WomenEraResponse,
 )
+from backend.services.exceptions import ServiceValidationError
 
 
 AGE_GROUP_ORDER = ["<30", "30-39", "40-49", "50-59", "60-69", "70-79", "80+"]
 ERA_ORDER = ["1901-1950", "1951-1970", "1971-1990", "1991-2010", "2011-present"]
+
+
+def _validate_year_range(
+    start_year: int | None,
+    end_year: int | None
+) -> None:
+    """Shared start_year/end_year validation for the small, consistent
+    Phase 10D filter set. Both bounds are individually validated for
+    range by the route's Query(ge=..., le=...) constraints (a 422); this
+    only checks the cross-field ordering constraint a single Query
+    parameter can't express on its own.
+    """
+    if (
+        start_year is not None
+        and end_year is not None
+        and start_year > end_year
+    ):
+        raise ServiceValidationError(
+            "start_year must be less than or equal to end_year"
+        )
 
 
 def get_summary(db: Session) -> AnalyticsSummaryResponse:
@@ -40,24 +62,43 @@ def get_summary(db: Session) -> AnalyticsSummaryResponse:
 
 def get_top_countries(
     db: Session,
-    limit: int = 5
+    limit: int = 5,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
 ) -> list[CountryCountResponse]:
-    results = analytics_repository.get_top_birth_countries(db, limit)
+    _validate_year_range(start_year, end_year)
+    results = analytics_repository.get_top_birth_countries(
+        db, limit, category, start_year, end_year
+    )
     return [
         CountryCountResponse(country=country, laureate_count=laureate_count)
         for country, laureate_count in results
     ]
 
 
-def get_prize_counts_by_decade(db: Session) -> list[PrizeDecadeCountResponse]:
-    results = analytics_repository.get_prize_counts_by_decade(db)
+def get_prize_counts_by_decade(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[PrizeDecadeCountResponse]:
+    _validate_year_range(start_year, end_year)
+    results = analytics_repository.get_prize_counts_by_decade(
+        db, category, start_year, end_year
+    )
     return [
         PrizeDecadeCountResponse(decade=decade, prize_count=prize_count)
         for decade, prize_count in results
     ]
 
 
-def get_age_distribution(db: Session) -> list[AgeDistributionResponse]:
+def get_age_distribution(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[AgeDistributionResponse]:
     # `results` holds one age-at-award OBSERVATION count per bucket, not
     # a distinct-laureate count: a repeat winner with a known birth date
     # contributes one observation per award, so the same person can
@@ -65,7 +106,12 @@ def get_age_distribution(db: Session) -> list[AgeDistributionResponse]:
     # ages. `laureate_count` is kept as the field name for frontend
     # backward compatibility, but see get_age_distribution() in
     # analytics_repository.py for the exact counting method.
-    results = dict(analytics_repository.get_age_distribution(db))
+    _validate_year_range(start_year, end_year)
+    results = dict(
+        analytics_repository.get_age_distribution(
+            db, category, start_year, end_year
+        )
+    )
     total = sum(results.values())
 
     return [
@@ -81,13 +127,21 @@ def get_age_distribution(db: Session) -> list[AgeDistributionResponse]:
     ]
 
 
-def get_women_percentage_by_era(db: Session) -> list[WomenEraResponse]:
+def get_women_percentage_by_era(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[WomenEraResponse]:
     # `totals[era]` is the denominator: distinct person laureates with a
     # recorded gender who were associated with an award in that era.
     # Organizations and unknown-gender records never enter this sum (the
     # repository excludes them before grouping), so they can never be
     # implicitly counted as male or female.
-    rows = analytics_repository.get_gender_counts_by_era(db)
+    _validate_year_range(start_year, end_year)
+    rows = analytics_repository.get_gender_counts_by_era(
+        db, category, start_year, end_year
+    )
 
     totals: dict[str, int] = {}
     female_totals: dict[str, int] = {}
@@ -111,8 +165,15 @@ def get_women_percentage_by_era(db: Session) -> list[WomenEraResponse]:
     ]
 
 
-def get_category_counts(db: Session) -> list[CategoryCountResponse]:
-    results = analytics_repository.get_laureate_counts_by_category(db)
+def get_category_counts(
+    db: Session,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[CategoryCountResponse]:
+    _validate_year_range(start_year, end_year)
+    results = analytics_repository.get_laureate_counts_by_category(
+        db, start_year, end_year
+    )
     return [
         CategoryCountResponse(
             category=category,
@@ -192,8 +253,16 @@ def get_gender_counts(
     ]
 
 
-def get_decade_counts(db: Session) -> list[DecadeCountResponse]:
-    results = analytics_repository.get_laureate_counts_by_decade(db)
+def get_decade_counts(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[DecadeCountResponse]:
+    _validate_year_range(start_year, end_year)
+    results = analytics_repository.get_laureate_counts_by_decade(
+        db, category, start_year, end_year
+    )
     return [
         DecadeCountResponse(
             decade=decade,
@@ -215,3 +284,23 @@ def get_average_age(
         category=category_name,
         average_age=average_age
     )
+
+
+def get_categories_by_decade(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[CategoryDecadeCountResponse]:
+    _validate_year_range(start_year, end_year)
+    results = analytics_repository.get_categories_by_decade(
+        db, category, start_year, end_year
+    )
+    return [
+        CategoryDecadeCountResponse(
+            decade=decade,
+            category=category_name,
+            laureate_count=laureate_count
+        )
+        for decade, category_name, laureate_count in results
+    ]

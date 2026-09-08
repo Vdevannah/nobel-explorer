@@ -7,6 +7,7 @@ from backend.schemas.analytics import (
     AnalyticsSummaryResponse,
     AverageAgeResponse,
     CategoryCountResponse,
+    CategoryDecadeCountResponse,
     CountryCountResponse,
     DecadeCountResponse,
     GenderCountResponse,
@@ -22,6 +23,20 @@ router = APIRouter(
     prefix="/analytics",
     tags=["Analytics"]
 )
+
+
+# Phase 10D: the small, consistent filter set (category/start_year/
+# end_year) shared by the six dashboard endpoints below. Both years are
+# independently optional (one-sided ranges are supported); the bounds
+# here reject obviously-invalid years with FastAPI's own 422, while the
+# start_year <= end_year ordering check (which spans two parameters) is
+# done once in analytics_service._validate_year_range and returns 400.
+MIN_NOBEL_YEAR = 1901
+MAX_NOBEL_YEAR = 2100
+
+CATEGORY_FILTER_DESCRIPTION = "Optional Nobel Prize category filter"
+START_YEAR_FILTER_DESCRIPTION = "Optional inclusive start year (Nobel-era year, e.g. 1901+)"
+END_YEAR_FILTER_DESCRIPTION = "Optional inclusive end year (Nobel-era year, e.g. 1901+)"
 
 
 @router.get(
@@ -45,11 +60,28 @@ def get_summary(db: Session = Depends(get_db)):
     summary="Count distinct laureates by category",
     description=(
         "Counts each laureate once within a Nobel Prize category. A "
-        "laureate recognized in multiple categories appears once in each."
+        "laureate recognized in multiple categories appears once in each. "
+        "Optional start_year/end_year narrow this to awards within that "
+        "range (no category filter here -- category is already the "
+        "grouping key)."
     ),
 )
-def get_laureates_by_category(db: Session = Depends(get_db)):
-    return analytics_service.get_category_counts(db)
+def get_laureates_by_category(
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_category_counts(db, start_year, end_year)
 
 
 @router.get(
@@ -139,7 +171,8 @@ def get_gender(
     description=(
         "Ranks recorded birth countries for person laureates (organizations "
         "excluded). Birth country is birthplace data, not nationality or "
-        "citizenship."
+        "citizenship. Optionally narrowed by category and/or start_year/"
+        "end_year."
     ),
 )
 def get_top_countries(
@@ -149,9 +182,27 @@ def get_top_countries(
         le=50,
         description="Maximum number of countries to return"
     ),
+    category: str | None = Query(
+        default=None,
+        description=CATEGORY_FILTER_DESCRIPTION
+    ),
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
     db: Session = Depends(get_db)
 ):
-    return analytics_service.get_top_countries(db, limit)
+    return analytics_service.get_top_countries(
+        db, limit, category, start_year, end_year
+    )
 
 
 @router.get(
@@ -160,11 +211,32 @@ def get_top_countries(
     summary="Count Prize rows by award decade",
     description=(
         "Counts distinct Prize records grouped into 10-year decades "
-        "derived from each Prize's award year (e.g. 1987 falls in 1980)."
+        "derived from each Prize's award year (e.g. 1987 falls in 1980). "
+        "Optionally narrowed by category and/or start_year/end_year."
     ),
 )
-def get_prizes_by_decade(db: Session = Depends(get_db)):
-    return analytics_service.get_prize_counts_by_decade(db)
+def get_prizes_by_decade(
+    category: str | None = Query(
+        default=None,
+        description=CATEGORY_FILTER_DESCRIPTION
+    ),
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_prize_counts_by_decade(
+        db, category, start_year, end_year
+    )
 
 
 @router.get(
@@ -177,11 +249,32 @@ def get_prizes_by_decade(db: Session = Depends(get_db)):
         "across every category. A repeat winner contributes one "
         "observation per award, so the same person may appear in more "
         "than one bucket if their awards came at different ages. "
-        "Organizations have no birth date and are excluded."
+        "Organizations have no birth date and are excluded. Optionally "
+        "narrowed by category and/or start_year/end_year."
     )
 )
-def get_age_distribution(db: Session = Depends(get_db)):
-    return analytics_service.get_age_distribution(db)
+def get_age_distribution(
+    category: str | None = Query(
+        default=None,
+        description=CATEGORY_FILTER_DESCRIPTION
+    ),
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_age_distribution(
+        db, category, start_year, end_year
+    )
 
 
 @router.get(
@@ -195,11 +288,32 @@ def get_age_distribution(db: Session = Depends(get_db)):
         "(women_count, known_gender_count) alongside the percentage for "
         "transparency. This is NOT a percentage of prizes awarded to "
         "women. Organizations and unknown-gender records are excluded "
-        "entirely -- never counted as male or female."
+        "entirely -- never counted as male or female. Optionally narrowed "
+        "by category and/or start_year/end_year."
     ),
 )
-def get_women_by_era(db: Session = Depends(get_db)):
-    return analytics_service.get_women_percentage_by_era(db)
+def get_women_by_era(
+    category: str | None = Query(
+        default=None,
+        description=CATEGORY_FILTER_DESCRIPTION
+    ),
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_women_percentage_by_era(
+        db, category, start_year, end_year
+    )
 
 
 @router.get(
@@ -208,11 +322,68 @@ def get_women_by_era(db: Session = Depends(get_db)):
     summary="Count distinct laureates by award decade",
     description=(
         "Counts each laureate once within each decade containing an "
-        "associated Prize. A repeat laureate may appear in multiple decades."
+        "associated Prize. A repeat laureate may appear in multiple "
+        "decades. Optionally narrowed by category and/or start_year/"
+        "end_year."
     ),
 )
-def get_decades(db: Session = Depends(get_db)):
-    return analytics_service.get_decade_counts(db)
+def get_decades(
+    category: str | None = Query(
+        default=None,
+        description=CATEGORY_FILTER_DESCRIPTION
+    ),
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_decade_counts(
+        db, category, start_year, end_year
+    )
+
+
+@router.get(
+    "/categories-by-decade",
+    response_model=list[CategoryDecadeCountResponse],
+    summary="Get distinct laureates by category, per decade",
+    description=(
+        "Phase 10E trend endpoint: counts DISTINCT laureates within each "
+        "category, for each 10-year decade derived from the Prize award "
+        "year, so recognition across fields can be compared over time. "
+        "Optionally narrowed by category and/or start_year/end_year."
+    ),
+)
+def get_categories_by_decade(
+    category: str | None = Query(
+        default=None,
+        description=CATEGORY_FILTER_DESCRIPTION
+    ),
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_categories_by_decade(
+        db, category, start_year, end_year
+    )
 
 
 @router.get(

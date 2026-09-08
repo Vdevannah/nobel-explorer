@@ -142,28 +142,67 @@ export function getAnalyticsSummary({ signal } = {}) {
   return analyticsRequest("summary", {}, signal);
 }
 
-export function getAnalyticsCategoryCounts({ signal } = {}) {
-  return analyticsRequest("laureates-by-category", {}, signal);
+// Phase 10D: the small, consistent category/start_year/end_year filter
+// set shared by the dashboard trend endpoints. All three are optional;
+// omitted values are simply left out of the query string.
+function withYearRangeFilters({ category = "", startYear = "", endYear = "" } = {}) {
+  return { category, start_year: startYear, end_year: endYear };
 }
 
-export function getAnalyticsDecades({ signal } = {}) {
-  return analyticsRequest("decades", {}, signal);
+export function getAnalyticsCategoryCounts({ startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "laureates-by-category",
+    withYearRangeFilters({ startYear, endYear }),
+    signal,
+  );
 }
 
-export function getAnalyticsPrizesByDecade({ signal } = {}) {
-  return analyticsRequest("prizes-by-decade", {}, signal);
+export function getAnalyticsDecades({ category, startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "decades",
+    withYearRangeFilters({ category, startYear, endYear }),
+    signal,
+  );
 }
 
-export function getAnalyticsTopCountries({ limit = 5, signal } = {}) {
-  return analyticsRequest("top-countries", { limit }, signal);
+export function getAnalyticsPrizesByDecade({ category, startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "prizes-by-decade",
+    withYearRangeFilters({ category, startYear, endYear }),
+    signal,
+  );
 }
 
-export function getAnalyticsAgeDistribution({ signal } = {}) {
-  return analyticsRequest("age-distribution", {}, signal);
+export function getAnalyticsTopCountries({ limit = 5, category, startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "top-countries",
+    { limit, ...withYearRangeFilters({ category, startYear, endYear }) },
+    signal,
+  );
 }
 
-export function getAnalyticsWomenByEra({ signal } = {}) {
-  return analyticsRequest("women-by-era", {}, signal);
+export function getAnalyticsAgeDistribution({ category, startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "age-distribution",
+    withYearRangeFilters({ category, startYear, endYear }),
+    signal,
+  );
+}
+
+export function getAnalyticsWomenByEra({ category, startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "women-by-era",
+    withYearRangeFilters({ category, startYear, endYear }),
+    signal,
+  );
+}
+
+export function getAnalyticsCategoriesByDecade({ category, startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "categories-by-decade",
+    withYearRangeFilters({ category, startYear, endYear }),
+    signal,
+  );
 }
 
 export function getAnalyticsForCategory(category, { signal } = {}) {

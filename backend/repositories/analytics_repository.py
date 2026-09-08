@@ -9,6 +9,25 @@ from backend.models.institution import Institution
 from backend.models.award_affiliation import AwardAffiliation
 
 
+def _year_range_conditions(
+    start_year: int | None,
+    end_year: int | None
+) -> list:
+    """Build optional Prize.year >= / <= conditions for the small,
+    consistent category/start_year/end_year filter set (Phase 10D).
+    Both bounds are optional and independent (one-sided ranges are
+    supported); returns an empty list when neither is supplied, so
+    passing it into a `.where(*conditions)` call is always safe and
+    changes nothing for existing unfiltered callers.
+    """
+    conditions = []
+    if start_year is not None:
+        conditions.append(Prize.year >= start_year)
+    if end_year is not None:
+        conditions.append(Prize.year <= end_year)
+    return conditions
+
+
 def count_total_laureates(db: Session) -> int:
     statement = select(
         func.count(Laureate.laureate_id)
@@ -59,8 +78,19 @@ def get_overall_gender_counts(db: Session) -> list[tuple[str, int]]:
 
 def get_top_birth_countries(
     db: Session,
-    limit: int = 5
+    limit: int = 5,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
 ) -> list[tuple[str, int]]:
+
+    conditions = [
+        Laureate.birth_country.is_not(None),
+        Laureate.laureate_type == "Person",
+        *_year_range_conditions(start_year, end_year)
+    ]
+    if category is not None:
+        conditions.append(Category.name == category)
 
     statement = (
         select(
@@ -73,10 +103,15 @@ def get_top_birth_countries(
             LaureatePrize,
             LaureatePrize.laureate_id == Laureate.laureate_id
         )
-        .where(
-            Laureate.birth_country.is_not(None),
-            Laureate.laureate_type == "Person"
+        .join(
+            Prize,
+            Prize.prize_id == LaureatePrize.prize_id
         )
+        .join(
+            Category,
+            Category.category_id == Prize.category_id
+        )
+        .where(*conditions)
         .group_by(Laureate.birth_country)
         .order_by(
             func.count(
@@ -90,28 +125,46 @@ def get_top_birth_countries(
 
 
 def get_prize_counts_by_decade(
-    db: Session
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
 ) -> list[tuple[int, int]]:
 
     decade = (
         func.floor(Prize.year / 10) * 10
     ).label("decade")
 
-    statement = (
-        select(
-            decade,
-            func.count(
-                func.distinct(Prize.prize_id)
-            ).label("prize_count")
-        )
-        .group_by(decade)
-        .order_by(decade)
+    conditions = _year_range_conditions(start_year, end_year)
+
+    statement = select(
+        decade,
+        func.count(
+            func.distinct(Prize.prize_id)
+        ).label("prize_count")
     )
+
+    if category is not None:
+        statement = statement.join(
+            Category,
+            Category.category_id == Prize.category_id
+        )
+        conditions.append(Category.name == category)
+
+    if conditions:
+        statement = statement.where(*conditions)
+
+    statement = statement.group_by(decade).order_by(decade)
 
     return list(db.execute(statement).all())
 
 
-def get_age_distribution(db: Session) -> list[tuple[str, int]]:
+def get_age_distribution(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[tuple[str, int]]:
     """Bucket age-at-award OBSERVATIONS (one per LaureatePrize row with a
     known birth date), not distinct laureates. A repeat winner with a
     known birth date contributes one observation per award, and those
@@ -119,7 +172,9 @@ def get_age_distribution(db: Session) -> list[tuple[str, int]]:
     different ages -- this is intentional (Phase 10F methodology), not a
     double-count bug. Counting `LaureatePrize.laureate_prize_id` (the
     join's own primary key) rather than `Laureate.laureate_id` is what
-    makes each award count as its own observation.
+    makes each award count as its own observation. The optional
+    category/start_year/end_year filters (Phase 10D) narrow which
+    observations are counted; they never change this counting method.
     """
     age_at_award = Prize.year - func.year(Laureate.birth_date)
 
@@ -132,6 +187,14 @@ def get_age_distribution(db: Session) -> list[tuple[str, int]]:
         (age_at_award < 80, "70-79"),
         else_="80+"
     ).label("age_group")
+
+    conditions = [
+        Laureate.laureate_type == "Person",
+        Laureate.birth_date.is_not(None),
+        *_year_range_conditions(start_year, end_year)
+    ]
+    if category is not None:
+        conditions.append(Category.name == category)
 
     statement = (
         select(
@@ -148,10 +211,11 @@ def get_age_distribution(db: Session) -> list[tuple[str, int]]:
             Laureate,
             Laureate.laureate_id == LaureatePrize.laureate_id
         )
-        .where(
-            Laureate.laureate_type == "Person",
-            Laureate.birth_date.is_not(None)
+        .join(
+            Category,
+            Category.category_id == Prize.category_id
         )
+        .where(*conditions)
         .group_by(age_group)
     )
 
@@ -159,7 +223,10 @@ def get_age_distribution(db: Session) -> list[tuple[str, int]]:
 
 
 def get_gender_counts_by_era(
-    db: Session
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
 ) -> list[tuple[str, str, int]]:
     """Count DISTINCT person laureates with known gender per era, not
     award observations: a laureate who won twice within the same era is
@@ -167,6 +234,9 @@ def get_gender_counts_by_era(
     unknown-gender records are excluded entirely (never counted, and
     never treated as a gender). This is the locked women-by-era
     methodology from Phase 10C/10F and is unchanged from prior phases.
+    The optional category/start_year/end_year filters (Phase 10D)
+    narrow which awards are considered before era-bucketing; they never
+    change the distinct-person counting method.
     """
     era = case(
         (Prize.year <= 1950, "1901-1950"),
@@ -175,6 +245,14 @@ def get_gender_counts_by_era(
         (Prize.year <= 2010, "1991-2010"),
         else_="2011-present"
     ).label("era")
+
+    conditions = [
+        Laureate.laureate_type == "Person",
+        Laureate.gender.is_not(None),
+        *_year_range_conditions(start_year, end_year)
+    ]
+    if category is not None:
+        conditions.append(Category.name == category)
 
     statement = (
         select(
@@ -192,10 +270,11 @@ def get_gender_counts_by_era(
             Laureate,
             Laureate.laureate_id == LaureatePrize.laureate_id
         )
-        .where(
-            Laureate.laureate_type == "Person",
-            Laureate.gender.is_not(None)
+        .join(
+            Category,
+            Category.category_id == Prize.category_id
         )
+        .where(*conditions)
         .group_by(era, Laureate.gender)
     )
 
@@ -203,8 +282,16 @@ def get_gender_counts_by_era(
 
 
 def get_laureate_counts_by_category(
-    db: Session
+    db: Session,
+    start_year: int | None = None,
+    end_year: int | None = None
 ) -> list[tuple[str, int]]:
+    # No `category` filter here: category is already this query's
+    # group-by key, so filtering by it would just collapse the result
+    # to one row -- start_year/end_year (Phase 10D) narrow the awards
+    # considered within each category instead.
+
+    conditions = _year_range_conditions(start_year, end_year)
 
     statement = (
         select(
@@ -225,12 +312,15 @@ def get_laureate_counts_by_category(
             Laureate,
             Laureate.laureate_id == LaureatePrize.laureate_id
         )
-        .group_by(Category.name)
-        .order_by(
-            func.count(
-                func.distinct(Laureate.laureate_id)
-            ).desc()
-        )
+    )
+
+    if conditions:
+        statement = statement.where(*conditions)
+
+    statement = statement.group_by(Category.name).order_by(
+        func.count(
+            func.distinct(Laureate.laureate_id)
+        ).desc()
     )
 
     return list(db.execute(statement).all())
@@ -408,31 +498,42 @@ def get_gender_counts_by_category(
     return list(db.execute(statement).all())
 
 def get_laureate_counts_by_decade(
-    db: Session
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
 ) -> list[tuple[int, int]]:
 
     decade = (
         func.floor(Prize.year / 10) * 10
     ).label("decade")
 
-    statement = (
-        select(
-            decade,
-            func.count(
-                func.distinct(Laureate.laureate_id)
-            ).label("laureate_count")
-        )
-        .join(
-            LaureatePrize,
-            LaureatePrize.prize_id == Prize.prize_id
-        )
-        .join(
-            Laureate,
-            Laureate.laureate_id == LaureatePrize.laureate_id
-        )
-        .group_by(decade)
-        .order_by(decade)
+    conditions = _year_range_conditions(start_year, end_year)
+
+    statement = select(
+        decade,
+        func.count(
+            func.distinct(Laureate.laureate_id)
+        ).label("laureate_count")
+    ).join(
+        LaureatePrize,
+        LaureatePrize.prize_id == Prize.prize_id
+    ).join(
+        Laureate,
+        Laureate.laureate_id == LaureatePrize.laureate_id
     )
+
+    if category is not None:
+        statement = statement.join(
+            Category,
+            Category.category_id == Prize.category_id
+        )
+        conditions.append(Category.name == category)
+
+    if conditions:
+        statement = statement.where(*conditions)
+
+    statement = statement.group_by(decade).order_by(decade)
 
     return list(db.execute(statement).all())
 
@@ -478,4 +579,58 @@ def get_average_age_at_award_by_category(
     result = db.scalar(statement)
 
     return float(result) if result is not None else None
+
+
+def get_categories_by_decade(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[tuple[int, str, int]]:
+    """Phase 10E trend: DISTINCT laureates within each category, per
+    decade -- one row per (decade, category) combination that has at
+    least one laureate. A repeat laureate winning the same category
+    twice in the same decade is still one row's worth of count (distinct
+    per decade+category, matching the locked laureates-by-category
+    semantics); winning in two different decades or two different
+    categories legitimately contributes to each combination.
+    """
+    decade = (
+        func.floor(Prize.year / 10) * 10
+    ).label("decade")
+
+    conditions = _year_range_conditions(start_year, end_year)
+    if category is not None:
+        conditions.append(Category.name == category)
+
+    statement = (
+        select(
+            decade,
+            Category.name,
+            func.count(
+                func.distinct(Laureate.laureate_id)
+            ).label("laureate_count")
+        )
+        .join(
+            Prize,
+            Prize.category_id == Category.category_id
+        )
+        .join(
+            LaureatePrize,
+            LaureatePrize.prize_id == Prize.prize_id
+        )
+        .join(
+            Laureate,
+            Laureate.laureate_id == LaureatePrize.laureate_id
+        )
+    )
+
+    if conditions:
+        statement = statement.where(*conditions)
+
+    statement = statement.group_by(decade, Category.name).order_by(
+        decade, Category.name
+    )
+
+    return list(db.execute(statement).all())
 

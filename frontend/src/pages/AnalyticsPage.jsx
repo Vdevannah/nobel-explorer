@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   getAnalyticsAgeDistribution,
+  getAnalyticsCategoriesByDecade,
   getAnalyticsCategoryCounts,
   getAnalyticsForCategory,
   getAnalyticsPrizesByDecade,
@@ -20,6 +21,7 @@ const DISCOVERY_QUESTIONS = [
   { icon: "♀", question: "Has the number of women Nobel laureates changed over time?", target: "#women-trend" },
   { icon: "🎂", question: "What age are scientists typically when they receive a Nobel Prize?", target: "#age-distribution" },
   { icon: "📈", question: "Are more Nobel Prizes being awarded today than in the past?", target: "#prizes-through-time" },
+  { icon: "🔬", question: "How has Nobel recognition across fields changed over time?", target: "#categories-through-time" },
 ];
 
 const DID_YOU_KNOW_FACTS = [
@@ -134,6 +136,61 @@ function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ari
   );
 }
 
+function CategoryTrendChart({ data, categoryColors, emptyMessage }) {
+  const width = 720;
+  const height = 230;
+
+  if (!data.length) return <p className="analytics-empty">{emptyMessage}</p>;
+
+  const decades = [...new Set(data.map((item) => item.decade))].sort((a, b) => a - b);
+  const categoryNames = [...new Set(data.map((item) => item.category))];
+  const lookup = new Map(data.map((item) => [`${item.decade}|${item.category}`, item.laureate_count]));
+  const maximum = Math.max(...data.map((item) => item.laureate_count), 1);
+
+  const xFor = (index) => (decades.length === 1 ? width / 2 : 20 + (index / (decades.length - 1)) * (width - 40));
+  const yFor = (count) => height - 32 - (count / maximum) * (height - 60);
+
+  const series = categoryNames.map((category) => ({
+    category,
+    color: categoryColors[category] || "#7c4dff",
+    points: decades.map((decade, index) => {
+      const count = lookup.get(`${decade}|${category}`) || 0;
+      return { decade, count, x: xFor(index), y: yFor(count) };
+    }),
+  }));
+
+  return (
+    <div className="decade-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Distinct laureates per category, by decade">
+        <line className="chart-axis" x1="20" x2={width - 20} y1={height - 32} y2={height - 32} />
+        {series.map((line) => (
+          <g key={line.category}>
+            <polyline className="chart-line" style={{ stroke: line.color }} points={line.points.map(({ x, y }) => `${x},${y}`).join(" ")} />
+            {line.points.map((point) => (
+              <circle className="category-trend-point" key={point.decade} cx={point.x} cy={point.y} r="3.5" style={{ fill: line.color }}>
+                <title>{line.category}, {point.decade}s: {point.count} laureates</title>
+              </circle>
+            ))}
+          </g>
+        ))}
+        {decades.map((decade, index) => (
+          (decades.length <= 8 || index % 2 === 0 || index === decades.length - 1) && (
+            <text key={decade} x={xFor(index)} y={height - 10} textAnchor="middle">{decade}s</text>
+          )
+        ))}
+      </svg>
+      <ul className="analytics-legend-inline">
+        {series.map((line) => (
+          <li key={line.category}>
+            <i style={{ background: line.color }} />
+            <span>{line.category}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AgeBarChart({ data }) {
   const maximum = Math.max(...data.map((item) => item.percentage), 1);
 
@@ -191,6 +248,7 @@ function AnalyticsPage() {
   const [topCountries, setTopCountries] = useState([]);
   const [ageDistribution, setAgeDistribution] = useState([]);
   const [womenByEra, setWomenByEra] = useState([]);
+  const [categoriesByDecade, setCategoriesByDecade] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("Physics");
   const [categoryAnalytics, setCategoryAnalytics] = useState(null);
@@ -198,24 +256,61 @@ function AnalyticsPage() {
   const [categoryStatus, setCategoryStatus] = useState("loading");
   const [retryKey, setRetryKey] = useState(0);
 
+  // Phase 10D: the small, consistent dashboard-wide filter set. Empty
+  // string means "no filter" for all three -- this is intentionally
+  // separate from `selectedCategory` below, which always holds a real
+  // category and drives the category-required deep-dive section further
+  // down the page.
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterStartYear, setFilterStartYear] = useState("");
+  const [filterEndYear, setFilterEndYear] = useState("");
+
+  const yearRangeInvalid = Boolean(
+    filterStartYear && filterEndYear && Number(filterStartYear) > Number(filterEndYear),
+  );
+
+  const resetFilters = () => {
+    setFilterCategory("");
+    setFilterStartYear("");
+    setFilterEndYear("");
+  };
+
   useEffect(() => {
+    if (yearRangeInvalid) {
+      // If an in-flight request from a previous (valid) filter change
+      // gets aborted by this effect re-running, its AbortError is
+      // swallowed below and never resolves globalStatus out of
+      // "loading" -- without this, an invalid range typed right after a
+      // valid one could leave the page stuck on the loading spinner
+      // forever. Falling back to "success" re-shows the last good
+      // dashboard (with the inline range error already visible above
+      // it) instead of a permanent spinner; only do this once real data
+      // exists, so the very first page load never renders `summary` etc.
+      // while still null.
+      if (summary) setGlobalStatus("success");
+      return undefined;
+    }
+
     const controller = new AbortController();
     setGlobalStatus("loading");
+    const filters = { category: filterCategory, startYear: filterStartYear, endYear: filterEndYear, signal: controller.signal };
     Promise.all([
       getAnalyticsSummary({ signal: controller.signal }),
-      getAnalyticsCategoryCounts({ signal: controller.signal }),
-      getAnalyticsPrizesByDecade({ signal: controller.signal }),
-      getAnalyticsTopCountries({ limit: 5, signal: controller.signal }),
-      getAnalyticsAgeDistribution({ signal: controller.signal }),
-      getAnalyticsWomenByEra({ signal: controller.signal }),
+      getAnalyticsCategoryCounts({ startYear: filterStartYear, endYear: filterEndYear, signal: controller.signal }),
+      getAnalyticsPrizesByDecade(filters),
+      getAnalyticsTopCountries({ limit: 5, ...filters }),
+      getAnalyticsAgeDistribution(filters),
+      getAnalyticsWomenByEra(filters),
+      getAnalyticsCategoriesByDecade(filters),
       getCategories({ signal: controller.signal }),
-    ]).then(([summaryData, categoryData, decadeData, countryData, ageData, womenData, categoryOptions]) => {
+    ]).then(([summaryData, categoryData, decadeData, countryData, ageData, womenData, categoryDecadeData, categoryOptions]) => {
       setSummary(summaryData);
       setCategoryCounts(categoryData);
       setPrizesByDecade(decadeData);
       setTopCountries(countryData);
       setAgeDistribution(ageData);
       setWomenByEra(womenData);
+      setCategoriesByDecade(categoryDecadeData);
       setCategories(categoryOptions);
       if (!categoryOptions.some((item) => item.name === selectedCategory) && categoryOptions[0]) {
         setSelectedCategory(categoryOptions[0].name);
@@ -228,7 +323,7 @@ function AnalyticsPage() {
       }
     });
     return () => controller.abort();
-  }, [retryKey]);
+  }, [retryKey, filterCategory, filterStartYear, filterEndYear, yearRangeInvalid]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -249,6 +344,13 @@ function AnalyticsPage() {
     [categoryAnalytics],
   );
 
+  // Shared category -> color mapping so the donut and the categories-
+  // by-decade trend chart use the same color for the same category.
+  const categoryColors = useMemo(
+    () => Object.fromEntries(categoryCounts.map((item, index) => [item.category, CHART_COLORS[index % CHART_COLORS.length]])),
+    [categoryCounts],
+  );
+
   if (globalStatus === "error") {
     return <div className="analytics-page container"><div className="analytics-state" role="alert"><h1>Analytics are temporarily unavailable.</h1><button className="button button-primary" onClick={() => setRetryKey((key) => key + 1)} type="button">Try again</button></div></div>;
   }
@@ -264,6 +366,30 @@ function AnalyticsPage() {
         <label className="analytics-category-control">Explore category<select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)} disabled={!categories.length}>{categories.map((category) => <option key={category.category_id} value={category.name}>{category.name}</option>)}</select></label>
       </header>
 
+      <section className="analytics-filter-bar container" aria-label="Filter dashboard totals and trends">
+        <label className="analytics-category-control" htmlFor="dashboard-filter-category">
+          Category
+          <select id="dashboard-filter-category" value={filterCategory} onChange={(event) => setFilterCategory(event.target.value)}>
+            <option value="">All categories</option>
+            {categories.map((category) => <option key={category.category_id} value={category.name}>{category.name}</option>)}
+          </select>
+        </label>
+        <label className="analytics-category-control" htmlFor="dashboard-filter-start-year">
+          Start year
+          <input id="dashboard-filter-start-year" type="number" inputMode="numeric" min="1901" max="2100" placeholder="e.g. 1950" value={filterStartYear} onChange={(event) => setFilterStartYear(event.target.value)} />
+        </label>
+        <label className="analytics-category-control" htmlFor="dashboard-filter-end-year">
+          End year
+          <input id="dashboard-filter-end-year" type="number" inputMode="numeric" min="1901" max="2100" placeholder="e.g. 2000" value={filterEndYear} onChange={(event) => setFilterEndYear(event.target.value)} />
+        </label>
+        <div className="analytics-filter-actions">
+          <button className="button button-secondary" type="button" onClick={resetFilters} disabled={!filterCategory && !filterStartYear && !filterEndYear}>
+            Reset
+          </button>
+        </div>
+        {yearRangeInvalid && <p className="analytics-filter-error" role="alert">Start year must be on or before end year.</p>}
+      </section>
+
       {globalStatus === "loading" ? <div className="analytics-loading container" role="status">Loading Nobel analytics…</div> : (
         <main className="analytics-dashboard container">
           <section className="analytics-metrics" aria-label="Nobel Explorer totals">
@@ -276,6 +402,13 @@ function AnalyticsPage() {
           <section className="analytics-grid analytics-grid-top">
             <article className="analytics-panel" id="prizes-through-time"><header><div><p className="panel-kicker">1901–present</p><h2>Nobel Prizes Through Time</h2></div></header><TrendLineChart data={prizesByDecade} xKey="decade" yKey="prize_count" formatX={(decade) => `${decade}s`} formatY={(count) => count} ariaLabel="Number of prizes awarded per decade" emptyMessage="No decade data is available." /></article>
             <article className="analytics-panel analytics-panel-wide" id="category-donut"><header><div><p className="panel-kicker">All categories</p><h2>Laureates by Category</h2></div></header><CategoryDonut data={categoryCounts} /></article>
+          </section>
+
+          <section className="analytics-grid analytics-grid-single" id="categories-through-time">
+            <article className="analytics-panel">
+              <header><div><p className="panel-kicker">{filterCategory || "All categories"}</p><h2>Nobel Recognition Across Fields</h2><p className="panel-note">Distinct laureates per category, by decade{filterCategory ? "" : " (use the Category filter above to focus on one field)"}.</p></div></header>
+              <CategoryTrendChart data={categoriesByDecade} categoryColors={categoryColors} emptyMessage="No category-by-decade data is available." />
+            </article>
           </section>
 
           <section className="analytics-grid analytics-grid-trends">

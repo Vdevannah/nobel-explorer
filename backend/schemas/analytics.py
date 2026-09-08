@@ -60,3 +60,9 @@ class WomenEraResponse(BaseModel):
     percentage: float
     women_count: int
     known_gender_count: int
+
+
+class CategoryDecadeCountResponse(BaseModel):
+    decade: int
+    category: str
+    laureate_count: int
