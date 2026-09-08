@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 
-const futureLinks = ["Learn", "Quiz"];
+const futureLinks = ["Quiz"];
 
 function Navbar() {
   return (
@@ -46,6 +46,14 @@ function Navbar() {
             to="/analytics"
           >
             Analytics
+          </NavLink>
+          <NavLink
+            className={({ isActive }) =>
+              isActive ? "nav-link nav-link-active" : "nav-link"
+            }
+            to="/learn"
+          >
+            Learn
           </NavLink>
           {futureLinks.map((label) => (
             <span

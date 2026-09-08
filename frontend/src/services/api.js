@@ -38,6 +38,10 @@ export function getLaureateContributions(laureateId, { signal } = {}) {
   );
 }
 
+export function getLearnTopics({ signal } = {}) {
+  return apiRequest("/contributions", { signal });
+}
+
 export function getContributionById(contributionId, { signal } = {}) {
   return apiRequest(`/contributions/${encodeURIComponent(contributionId)}`, { signal });
 }

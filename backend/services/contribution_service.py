@@ -7,6 +7,7 @@ from backend.repositories import (
     laureate_repository,
 )
 from backend.schemas.contribution import (
+    ContributionCatalogItem,
     ContributionCreate,
     ContributionDetailResponse,
     ContributionResponse,
@@ -15,6 +16,9 @@ from backend.schemas.contribution import (
 from backend.schemas.explanation import ExplanationResponse
 from backend.services import connection_service
 from backend.services.exceptions import ResourceNotFoundError, ServiceValidationError
+
+
+LEVEL_ORDER = ["Simple", "Explore", "Advanced", "Expert"]
 
 
 def _validate_relationships(
@@ -83,6 +87,41 @@ def get_contribution(
             for connection in contribution.connections
         ],
     )
+
+
+def list_catalog(db: Session) -> list[ContributionCatalogItem]:
+    contributions = contribution_repository.list_catalog(db)
+    catalog: list[ContributionCatalogItem] = []
+    for contribution in contributions:
+        prize = (
+            contribution.laureate_prize.prize
+            if contribution.laureate_prize is not None
+            else None
+        )
+        category_name = (
+            prize.category.name if prize is not None and prize.category is not None else None
+        )
+        prize_year = prize.year if prize is not None else None
+        available_levels = sorted(
+            {explanation.level for explanation in contribution.explanations},
+            key=LEVEL_ORDER.index,
+        )
+        catalog.append(
+            ContributionCatalogItem(
+                contribution_id=contribution.contribution_id,
+                title=contribution.title,
+                summary=contribution.summary,
+                contribution_type=contribution.contribution_type,
+                laureate_id=contribution.laureate_id,
+                laureate_name=contribution.laureate.full_name,
+                image_url=contribution.laureate.image_url,
+                category=category_name,
+                prize_year=prize_year,
+                available_levels=available_levels,
+                quiz_available=len(contribution.quiz_questions) > 0,
+            )
+        )
+    return catalog
 
 
 def create_contribution(db: Session, data: ContributionCreate) -> Contribution:

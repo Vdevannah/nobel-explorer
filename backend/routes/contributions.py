@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.database.connection import get_db
 from backend.schemas.connection import ConnectionResponse
-from backend.schemas.contribution import ContributionDetailResponse
+from backend.schemas.contribution import ContributionCatalogItem, ContributionDetailResponse
 from backend.schemas.explanation import ExplanationLevel, ExplanationResponse
 from backend.schemas.quiz_question import QuizQuestionPublicResponse
 from backend.services import (
@@ -15,6 +15,15 @@ from backend.services import (
 
 
 router = APIRouter(prefix="/contributions", tags=["Educational Content"])
+
+
+@router.get(
+    "",
+    response_model=list[ContributionCatalogItem],
+    summary="List all contributions as a discovery catalog",
+)
+def list_contributions_catalog(db: Session = Depends(get_db)):
+    return contribution_service.list_catalog(db)
 
 
 @router.get(

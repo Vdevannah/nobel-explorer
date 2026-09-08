@@ -6,6 +6,7 @@ import CategoryPage from "./pages/CategoryPage";
 import HomePage from "./pages/HomePage";
 import LaureateDetailPage from "./pages/LaureateDetailPage";
 import LaureatesPage from "./pages/LaureatesPage";
+import LearnPage from "./pages/LearnPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PrizeDetailPage from "./pages/PrizeDetailPage";
 import PrizesPage from "./pages/PrizesPage";
@@ -23,6 +24,7 @@ function App() {
           <Route path="/categories/:categoryId" element={<CategoryPage />} />
           <Route path="/laureates" element={<LaureatesPage />} />
           <Route path="/laureates/:laureateId" element={<LaureateDetailPage />} />
+          <Route path="/learn" element={<LearnPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

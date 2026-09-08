@@ -36,3 +36,19 @@ class ContributionResponse(ContributionBase):
 class ContributionDetailResponse(ContributionResponse):
     explanations: list[ExplanationResponse] = Field(default_factory=list)
     connections: list[ConnectionResponse] = Field(default_factory=list)
+
+
+class ContributionCatalogItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    contribution_id: int
+    title: str
+    summary: str | None
+    contribution_type: ContributionType
+    laureate_id: int
+    laureate_name: str
+    image_url: str | None
+    category: str | None
+    prize_year: int | None
+    available_levels: list[str]
+    quiz_available: bool

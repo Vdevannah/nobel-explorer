@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { getContributionById, getContributionQuiz } from "../../services/api";
 import { getConnectionVisual, getContributionVisual } from "../../data/educationalVisuals";
@@ -270,18 +270,64 @@ function QuizSection({ questions, status }) {
   );
 }
 
+const sectionIds = educationSections.map((section) => section.id);
+
+function updateSearchParams(setSearchParams, updates) {
+  setSearchParams(
+    (previous) => {
+      const next = new URLSearchParams(previous);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null || value === undefined) {
+          next.delete(key);
+        } else {
+          next.set(key, String(value));
+        }
+      });
+      return next;
+    },
+    { replace: true },
+  );
+}
+
 function EducationalContent({ contributions, laureateName }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const requestedSection = searchParams.get("section");
+  const requestedLevel = searchParams.get("level");
+
   const [selectedId, setSelectedId] = useState(contributions[0]?.contribution_id ?? null);
-  const [activeSection, setActiveSection] = useState("learn");
-  const [level, setLevel] = useState("Simple");
+  const [activeSection, setActiveSection] = useState(
+    sectionIds.includes(requestedSection) ? requestedSection : "learn",
+  );
+  const [level, setLevel] = useState(levels.includes(requestedLevel) ? requestedLevel : "Simple");
   const [detail, setDetail] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [status, setStatus] = useState("loading");
   const [quizStatus, setQuizStatus] = useState("loading");
 
   useEffect(() => {
-    setSelectedId(contributions[0]?.contribution_id ?? null);
+    const requestedId = Number(searchParams.get("contribution"));
+    const requestedIsValid = contributions.some(
+      (contribution) => contribution.contribution_id === requestedId,
+    );
+    setSelectedId(requestedIsValid ? requestedId : contributions[0]?.contribution_id ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contributions]);
+
+  function handleSelectContribution(contributionId) {
+    setSelectedId(contributionId);
+    updateSearchParams(setSearchParams, { contribution: contributionId });
+  }
+
+  function handleSectionChange(sectionId) {
+    setActiveSection(sectionId);
+    updateSearchParams(setSearchParams, { section: sectionId });
+  }
+
+  function handleLevelChange(nextLevel) {
+    setLevel(nextLevel);
+    updateSearchParams(setSearchParams, { level: nextLevel });
+  }
 
   useEffect(() => {
     if (!selectedId) return undefined;
@@ -312,7 +358,7 @@ function EducationalContent({ contributions, laureateName }) {
 
   return (
     <div className="educational-content">
-      <EducationSectionTabs activeSection={activeSection} onChange={setActiveSection} />
+      <EducationSectionTabs activeSection={activeSection} onChange={handleSectionChange} />
       <div
         className="education-workspace education-section-panel"
         id={`education-panel-${activeSection}`}
@@ -320,7 +366,7 @@ function EducationalContent({ contributions, laureateName }) {
         aria-labelledby={`education-tab-${activeSection}`}
       >
         {activeSection === "explore" && (
-          <ContributionSelector contributions={contributions} laureateName={laureateName} selectedId={selectedId} onSelect={setSelectedId} />
+          <ContributionSelector contributions={contributions} laureateName={laureateName} selectedId={selectedId} onSelect={handleSelectContribution} />
         )}
         {activeSection !== "explore" && status === "loading" && (
           <p className="education-status" role="status">Loading educational content…</p>
@@ -332,7 +378,7 @@ function EducationalContent({ contributions, laureateName }) {
         )}
         {status === "success" && detail && activeSection === "learn" && (
           <div className="education-main">
-            <LearningSection contribution={detail} explanations={detail.explanations} level={level} onLevelChange={setLevel} />
+            <LearningSection contribution={detail} explanations={detail.explanations} level={level} onLevelChange={handleLevelChange} />
           </div>
         )}
         {status === "success" && detail && activeSection === "impact" && (

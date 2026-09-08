@@ -112,3 +112,124 @@ def test_educational_read_endpoints_and_quiz_safety():
         app.dependency_overrides.clear()
         db.rollback()
         db.close()
+
+
+def test_contributions_catalog_reflects_real_content():
+    db = SessionLocal()
+    try:
+        category = Category(name="Educational Catalog Test Physics")
+        prize = Prize(year=1954, category=category)
+        laureate = Laureate(
+            nobel_laureate_id="TEST-EDU-CATALOG-001",
+            full_name="Catalog Test Laureate",
+            laureate_type="Person",
+            image_url="https://example.com/catalog-laureate.jpg",
+            featured=False,
+        )
+        laureate_prize = LaureatePrize(laureate=laureate, prize=prize)
+
+        nobel_linked = Contribution(
+            laureate=laureate,
+            laureate_prize=laureate_prize,
+            contribution_type="NOBEL_LINKED",
+            title="Catalog Nobel-Linked Contribution",
+            summary="A nobel-linked summary.",
+        )
+        beyond_nobel = Contribution(
+            laureate=laureate,
+            contribution_type="BEYOND_NOBEL",
+            title="Catalog Beyond-Nobel Contribution",
+            summary="A beyond-nobel summary.",
+        )
+
+        simple_explanation = Explanation(
+            contribution=nobel_linked,
+            level="Simple",
+            explanation_text="Simple text",
+        )
+        explore_explanation = Explanation(
+            contribution=nobel_linked,
+            level="Explore",
+            explanation_text="Explore text",
+        )
+        beyond_explanation = Explanation(
+            contribution=beyond_nobel,
+            level="Simple",
+            explanation_text="Simple beyond text",
+        )
+
+        quiz = QuizQuestion(
+            contribution=nobel_linked,
+            level="Simple",
+            question="Catalog quiz question?",
+            choice_a="A",
+            choice_b="B",
+            choice_c="C",
+            choice_d="D",
+            correct_answer="A",
+        )
+
+        db.add_all(
+            [
+                category,
+                laureate,
+                nobel_linked,
+                beyond_nobel,
+                simple_explanation,
+                explore_explanation,
+                beyond_explanation,
+                quiz,
+            ]
+        )
+        db.flush()
+
+        def override_get_db():
+            yield db
+
+        app.dependency_overrides[get_db] = override_get_db
+        client = TestClient(app)
+
+        response = client.get("/contributions")
+        assert response.status_code == 200
+
+        catalog = response.json()
+        by_id = {item["contribution_id"]: item for item in catalog}
+
+        nobel_item = by_id[nobel_linked.contribution_id]
+        assert nobel_item["title"] == "Catalog Nobel-Linked Contribution"
+        assert nobel_item["summary"] == "A nobel-linked summary."
+        assert nobel_item["contribution_type"] == "NOBEL_LINKED"
+        assert nobel_item["laureate_id"] == laureate.laureate_id
+        assert nobel_item["laureate_name"] == "Catalog Test Laureate"
+        assert nobel_item["image_url"] == "https://example.com/catalog-laureate.jpg"
+        assert nobel_item["category"] == "Educational Catalog Test Physics"
+        assert nobel_item["prize_year"] == 1954
+        assert nobel_item["available_levels"] == ["Simple", "Explore"]
+        assert nobel_item["quiz_available"] is True
+
+        beyond_item = by_id[beyond_nobel.contribution_id]
+        assert beyond_item["contribution_type"] == "BEYOND_NOBEL"
+        assert beyond_item["category"] is None
+        assert beyond_item["prize_year"] is None
+        assert beyond_item["available_levels"] == ["Simple"]
+        assert beyond_item["quiz_available"] is False
+
+        # every catalog item must expose the full expected shape
+        expected_keys = {
+            "contribution_id",
+            "title",
+            "summary",
+            "contribution_type",
+            "laureate_id",
+            "laureate_name",
+            "image_url",
+            "category",
+            "prize_year",
+            "available_levels",
+            "quiz_available",
+        }
+        assert expected_keys.issubset(nobel_item.keys())
+    finally:
+        app.dependency_overrides.clear()
+        db.rollback()
+        db.close()

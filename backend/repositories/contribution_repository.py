@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from backend.models.connection import Connection
 from backend.models.contribution import Contribution
+from backend.models.laureate_prize import LaureatePrize
 from backend.models.prize import Prize
 
 
@@ -25,6 +26,22 @@ def get_detail_by_id(db: Session, contribution_id: int) -> Contribution | None:
         )
     )
     return db.scalar(statement)
+
+
+def list_catalog(db: Session) -> list[Contribution]:
+    statement = (
+        select(Contribution)
+        .options(
+            selectinload(Contribution.laureate),
+            selectinload(Contribution.laureate_prize)
+            .selectinload(LaureatePrize.prize)
+            .selectinload(Prize.category),
+            selectinload(Contribution.explanations),
+            selectinload(Contribution.quiz_questions),
+        )
+        .order_by(Contribution.contribution_id)
+    )
+    return list(db.scalars(statement).all())
 
 
 def get_by_laureate(
