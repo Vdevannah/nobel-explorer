@@ -37,7 +37,12 @@ class QuizQuestionUpdate(QuizQuestionCreate):
     pass
 
 
+class QuizAnswerCheckRequest(BaseModel):
+    selected_answer: QuizAnswer
+
+
 class QuizAnswerReviewResponse(BaseModel):
     question_id: int
+    correct: bool
     correct_answer: QuizAnswer
     answer_explanation: str | None

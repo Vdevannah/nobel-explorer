@@ -10,6 +10,7 @@ import LearnPage from "./pages/LearnPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PrizeDetailPage from "./pages/PrizeDetailPage";
 import PrizesPage from "./pages/PrizesPage";
+import QuizPage from "./pages/QuizPage";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/laureates" element={<LaureatesPage />} />
           <Route path="/laureates/:laureateId" element={<LaureateDetailPage />} />
           <Route path="/learn" element={<LearnPage />} />
+          <Route path="/quiz" element={<QuizPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

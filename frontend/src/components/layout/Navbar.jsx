@@ -1,7 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
 
-const futureLinks = ["Quiz"];
-
 function Navbar() {
   return (
     <header className="site-header">
@@ -55,15 +53,14 @@ function Navbar() {
           >
             Learn
           </NavLink>
-          {futureLinks.map((label) => (
-            <span
-              className="nav-link nav-link-disabled"
-              aria-disabled="true"
-              key={label}
-            >
-              {label}
-            </span>
-          ))}
+          <NavLink
+            className={({ isActive }) =>
+              isActive ? "nav-link nav-link-active" : "nav-link"
+            }
+            to="/quiz"
+          >
+            Quiz
+          </NavLink>
         </div>
       </nav>
     </header>

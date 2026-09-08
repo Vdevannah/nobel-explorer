@@ -235,37 +235,32 @@ function ConnectionsSection({ connections }) {
   );
 }
 
-function QuizSection({ questions, status }) {
+function QuizSection({ contributionId, level, questionCount, status }) {
   return (
     <section className="quiz-preview" id="quiz" aria-labelledby="quiz-title">
       <div className="detail-section-heading">
         <p className="eyebrow">Test your knowledge</p>
         <h2 id="quiz-title">Test Your Knowledge</h2>
-        <p>Try a short quiz about the selected contribution.</p>
+        <p>Challenge yourself with an interactive quiz about this contribution.</p>
       </div>
-      {status === "loading" && <p className="education-status">Loading questions…</p>}
-      {status === "error" && <p className="education-status education-status--error">Questions could not be loaded.</p>}
-      {status === "success" && !questions.length && (
+      {status === "loading" && <p className="education-status">Loading quiz…</p>}
+      {status === "error" && <p className="education-status education-status--error">Quiz could not be loaded.</p>}
+      {status === "success" && !questionCount && (
         <p className="education-status">No quiz questions are available for this contribution yet.</p>
       )}
-      {status === "success" && questions.length > 0 && (
-        <details className="quiz-launcher">
-          <summary>Start Quiz — {questions.length} Questions</summary>
-          <div className="quiz-question-list">
-          {questions.map((question, index) => (
-            <details className="quiz-question" key={question.question_id}>
-              <summary>{index + 1}. {question.question}</summary>
-              <ol type="A">
-                {[question.choice_a, question.choice_b, question.choice_c, question.choice_d].map((choice) => (
-                  <li key={choice}>{choice}</li>
-                ))}
-              </ol>
-            </details>
-          ))}
-          </div>
-        </details>
+      {status === "success" && questionCount > 0 && (
+        <>
+          <p className="education-status">
+            {questionCount} quiz question{questionCount === 1 ? "" : "s"} available.
+          </p>
+          <Link
+            className="button button-primary"
+            to={`/quiz?contribution=${contributionId}&level=${level}`}
+          >
+            Take Interactive Quiz <span aria-hidden="true">→</span>
+          </Link>
+        </>
       )}
-      <p className="quiz-note">Answer checking will be added in the next learning phase.</p>
     </section>
   );
 }
@@ -397,7 +392,12 @@ function EducationalContent({ contributions, laureateName }) {
           <ConnectionsSection connections={detail.connections} />
         )}
         {status === "success" && detail && activeSection === "quiz" && (
-          <QuizSection questions={questions} status={quizStatus} />
+          <QuizSection
+            contributionId={selectedId}
+            level={level}
+            questionCount={questions.length}
+            status={quizStatus}
+          />
         )}
       </div>
     </div>

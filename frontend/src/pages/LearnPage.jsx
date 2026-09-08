@@ -97,15 +97,20 @@ function LessonCard({ topic, preferredLevel }) {
 
       {topic.summary && <p className="learn-lesson-summary">{topic.summary}</p>}
 
-      {topic.quiz_available && (
-        <span className="learn-quiz-badge">
-          <span aria-hidden="true">✓</span> Quiz Available
-        </span>
-      )}
+      <div className="learn-lesson-ctas">
+        <Link className="learn-lesson-cta" to={lessonHref}>
+          Start at {preferredLevel} Level <span aria-hidden="true">→</span>
+        </Link>
 
-      <Link className="learn-lesson-cta" to={lessonHref}>
-        Start at {preferredLevel} Level <span aria-hidden="true">→</span>
-      </Link>
+        {topic.quiz_available && (
+          <Link
+            className="learn-quiz-badge learn-quiz-badge--link"
+            to={`/quiz?contribution=${topic.contribution_id}&level=${preferredLevel}`}
+          >
+            <span aria-hidden="true">✓</span> Take the Quiz <span aria-hidden="true">→</span>
+          </Link>
+        )}
+      </div>
     </article>
   );
 }

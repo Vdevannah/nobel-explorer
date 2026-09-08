@@ -108,6 +108,108 @@ def test_educational_read_endpoints_and_quiz_safety():
 
         missing_response = client.get("/contributions/999999999")
         assert missing_response.status_code == 404
+
+        invalid_level_response = client.get(
+            f"/contributions/{contribution.contribution_id}/explanations",
+            params={"level": "NotALevel"},
+        )
+        assert invalid_level_response.status_code == 422
+
+        invalid_quiz_level_response = client.get(
+            f"/contributions/{contribution.contribution_id}/quiz",
+            params={"level": "NotALevel"},
+        )
+        assert invalid_quiz_level_response.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+        db.rollback()
+        db.close()
+
+
+def test_quiz_answer_check_endpoint():
+    db = SessionLocal()
+    try:
+        category = Category(name="Quiz Check Test Physics")
+        prize = Prize(year=1930, category=category)
+        laureate = Laureate(
+            nobel_laureate_id="TEST-QUIZ-CHECK-001",
+            full_name="Quiz Check Test Laureate",
+            laureate_type="Person",
+            featured=False,
+        )
+        laureate_prize = LaureatePrize(laureate=laureate, prize=prize)
+        contribution = Contribution(
+            laureate=laureate,
+            laureate_prize=laureate_prize,
+            contribution_type="NOBEL_LINKED",
+            title="Quiz Check Contribution",
+        )
+        question = QuizQuestion(
+            contribution=contribution,
+            level="Simple",
+            question="Which choice is correct?",
+            choice_a="First",
+            choice_b="Second",
+            choice_c="Third",
+            choice_d="Fourth",
+            correct_answer="B",
+            answer_explanation="Second is correct because of X.",
+        )
+        db.add_all([category, question])
+        db.flush()
+
+        def override_get_db():
+            yield db
+
+        app.dependency_overrides[get_db] = override_get_db
+        client = TestClient(app)
+
+        # correct answer
+        correct_response = client.post(
+            f"/quiz-questions/{question.question_id}/check",
+            json={"selected_answer": "B"},
+        )
+        assert correct_response.status_code == 200
+        correct_body = correct_response.json()
+        assert correct_body == {
+            "question_id": question.question_id,
+            "correct": True,
+            "correct_answer": "B",
+            "answer_explanation": "Second is correct because of X.",
+        }
+
+        # incorrect answer
+        incorrect_response = client.post(
+            f"/quiz-questions/{question.question_id}/check",
+            json={"selected_answer": "A"},
+        )
+        assert incorrect_response.status_code == 200
+        incorrect_body = incorrect_response.json()
+        assert incorrect_body["correct"] is False
+        assert incorrect_body["correct_answer"] == "B"
+
+        # invalid answer letter
+        invalid_answer_response = client.post(
+            f"/quiz-questions/{question.question_id}/check",
+            json={"selected_answer": "Z"},
+        )
+        assert invalid_answer_response.status_code == 422
+
+        # nonexistent question
+        missing_response = client.post(
+            "/quiz-questions/999999999/check",
+            json={"selected_answer": "A"},
+        )
+        assert missing_response.status_code == 404
+
+        # the public GET response must still never expose the answer key
+        public_response = client.get(
+            f"/contributions/{contribution.contribution_id}/quiz"
+        )
+        assert public_response.status_code == 200
+        public_question = public_response.json()[0]
+        assert "correct_answer" not in public_question
+        assert "answer_explanation" not in public_question
     finally:
         app.dependency_overrides.clear()
         db.rollback()

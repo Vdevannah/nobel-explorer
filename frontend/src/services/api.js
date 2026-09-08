@@ -73,6 +73,15 @@ export function getContributionQuiz(contributionId, { level = "", signal } = {})
   );
 }
 
+export function checkQuizAnswer(questionId, selectedAnswer, { signal } = {}) {
+  return apiRequest(`/quiz-questions/${encodeURIComponent(questionId)}/check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ selected_answer: selectedAnswer }),
+    signal,
+  });
+}
+
 export function getLaureates({
   limit = 20,
   offset = 0,

@@ -392,6 +392,298 @@ PHOTOELECTRIC_QUIZ = [
             "so eV_s equals their maximum kinetic energy."
         ),
     },
+    {
+        "level": "Simple",
+        "question": "What are the tiny bundles of light energy called?",
+        "choice_a": "Photons",
+        "choice_b": "Protons",
+        "choice_c": "Electrons",
+        "choice_d": "Neutrons",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Light is made of tiny energy bundles called photons."
+        ),
+    },
+    {
+        "level": "Simple",
+        "question": "In the photoelectric effect, what does light knock out of a metal?",
+        "choice_a": "An electron",
+        "choice_b": "A proton",
+        "choice_c": "The whole atom",
+        "choice_d": "A magnet",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "A photon can hit an electron and knock it out of the metal."
+        ),
+    },
+    {
+        "level": "Explore",
+        "question": (
+            "What is the minimum light frequency needed to release an electron "
+            "from a metal called?"
+        ),
+        "choice_a": "Threshold frequency",
+        "choice_b": "Boiling point",
+        "choice_c": "Escape velocity",
+        "choice_d": "Wavelength limit",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "The threshold frequency is the minimum frequency a photon needs to "
+            "release an electron."
+        ),
+    },
+    {
+        "level": "Explore",
+        "question": (
+            "If light frequency is below the threshold, what happens no matter "
+            "how bright the light is?"
+        ),
+        "choice_a": "No electrons are released",
+        "choice_b": "Electrons are released faster",
+        "choice_c": "The metal melts",
+        "choice_d": "Electrons gain extra mass",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Brighter low-frequency light sends more photons, but none of them "
+            "carry enough energy to release an electron."
+        ),
+    },
+    {
+        "level": "Advanced",
+        "question": "In the equation E = hν, what does h represent?",
+        "choice_a": "Planck's constant",
+        "choice_b": "The speed of light",
+        "choice_c": "The electron's charge",
+        "choice_d": "The work function",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "h is Planck's constant, which relates a photon's frequency to its "
+            "energy."
+        ),
+    },
+    {
+        "level": "Advanced",
+        "question": (
+            "What is the term for the minimum energy needed to free an electron "
+            "from a specific metal?"
+        ),
+        "choice_a": "Work function",
+        "choice_b": "Kinetic energy",
+        "choice_c": "Threshold voltage",
+        "choice_d": "Photon frequency",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "The work function φ is the minimum energy a metal requires to free "
+            "an electron."
+        ),
+    },
+    {
+        "level": "Expert",
+        "question": (
+            "In the stopping-potential experiment, what does the elementary "
+            "charge e represent in eVs = Kmax?"
+        ),
+        "choice_a": "The charge of the electron",
+        "choice_b": "The charge of the photon",
+        "choice_c": "The charge of the nucleus",
+        "choice_d": "A unit of frequency",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "e is the elementary charge carried by the electron, linking the "
+            "measured stopping voltage to its kinetic energy."
+        ),
+    },
+    {
+        "level": "Expert",
+        "question": (
+            "At a fixed frequency above threshold, increasing light intensity "
+            "primarily increases which quantity?"
+        ),
+        "choice_a": "The photocurrent (number of photoelectrons)",
+        "choice_b": "The maximum kinetic energy per electron",
+        "choice_c": "The work function of the metal",
+        "choice_d": "The stopping potential",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "More intense light delivers more photons per second, raising the "
+            "photocurrent, but each photon's energy is unchanged at fixed "
+            "frequency."
+        ),
+    },
+]
+
+
+RELATIVITY_QUIZ = [
+    {
+        "level": "Simple",
+        "question": "What did Einstein say space and time together form?",
+        "choice_a": "Spacetime",
+        "choice_b": "A rainbow",
+        "choice_c": "A magnetic field",
+        "choice_d": "A rocket ship",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Einstein described space and time as one combined thing called "
+            "spacetime."
+        ),
+    },
+    {
+        "level": "Simple",
+        "question": (
+            "In the stretched-sheet picture, what happens when you place a heavy "
+            "ball on the sheet?"
+        ),
+        "choice_a": "The sheet bends",
+        "choice_b": "The sheet turns to ice",
+        "choice_c": "The ball disappears",
+        "choice_d": "The sheet flies away",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "The heavy ball bends the sheet, similar to how a massive object "
+            "curves spacetime around it."
+        ),
+    },
+    {
+        "level": "Simple",
+        "question": "What can massive objects like stars do to spacetime?",
+        "choice_a": "Curve it",
+        "choice_b": "Erase it",
+        "choice_c": "Freeze it",
+        "choice_d": "Multiply it",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Massive objects such as stars and planets can bend, or curve, "
+            "spacetime around them."
+        ),
+    },
+    {
+        "level": "Explore",
+        "question": (
+            "According to general relativity, what can a massive star or galaxy "
+            "do to light passing near it?"
+        ),
+        "choice_a": "Bend its path",
+        "choice_b": "Turn it a different color permanently",
+        "choice_c": "Stop it completely",
+        "choice_d": "Make it invisible",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Light follows the curved paths available in spacetime, so massive "
+            "objects can bend the route light takes."
+        ),
+    },
+    {
+        "level": "Explore",
+        "question": "Was general relativity the work for which Einstein received his Nobel Prize?",
+        "choice_a": "No, his Nobel Prize was for the photoelectric effect",
+        "choice_b": "Yes, it was his Nobel-winning work",
+        "choice_c": "He won two separate Nobel Prizes for it",
+        "choice_d": "He never explained general relativity",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Einstein's 1921 Nobel Prize was awarded for the photoelectric "
+            "effect, not for general relativity."
+        ),
+    },
+    {
+        "level": "Explore",
+        "question": "What does general relativity say about clocks in different gravitational conditions?",
+        "choice_a": "They can run at different rates",
+        "choice_b": "They all stop working",
+        "choice_c": "They only work in space",
+        "choice_d": "They run backward",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Gravity affects time, so clocks can run at different rates in "
+            "different gravitational conditions."
+        ),
+    },
+    {
+        "level": "Advanced",
+        "question": "What does the equivalence principle connect?",
+        "choice_a": "Free fall and locally inertial motion",
+        "choice_b": "Light and sound",
+        "choice_c": "Electrons and protons",
+        "choice_d": "Voltage and current",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "The equivalence principle connects free fall with locally inertial "
+            "motion, since gravity can locally resemble weightlessness."
+        ),
+    },
+    {
+        "level": "Advanced",
+        "question": (
+            "In general relativity, what path do freely moving objects follow "
+            "through curved spacetime?"
+        ),
+        "choice_a": "Geodesics",
+        "choice_b": "Straight lines only",
+        "choice_c": "Circular orbits only",
+        "choice_d": "Random paths",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Freely moving objects follow geodesics, the straightest possible "
+            "paths through curved spacetime."
+        ),
+    },
+    {
+        "level": "Advanced",
+        "question": (
+            "What happens to clocks deeper in a stronger gravitational field, "
+            "relative to clocks farther away?"
+        ),
+        "choice_a": "They run more slowly",
+        "choice_b": "They run faster",
+        "choice_c": "They stop entirely",
+        "choice_d": "They run at the same rate",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "Gravitational time dilation makes clocks deeper in a stronger "
+            "gravitational field run more slowly relative to clocks farther "
+            "away."
+        ),
+    },
+    {
+        "level": "Expert",
+        "question": "What does the Einstein field equation relate?",
+        "choice_a": "Spacetime curvature to matter and energy",
+        "choice_b": "Voltage to current",
+        "choice_c": "Frequency to wavelength",
+        "choice_d": "Mass to charge",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "The Einstein field equation links spacetime curvature (via the "
+            "Einstein tensor) to matter and energy (via the stress-energy "
+            "tensor)."
+        ),
+    },
+    {
+        "level": "Expert",
+        "question": "What mathematical object describes spacetime geometry in general relativity?",
+        "choice_a": "The metric tensor",
+        "choice_b": "The wave function",
+        "choice_c": "The Hamiltonian",
+        "choice_d": "The partition function",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "The metric tensor gμν defines spacetime intervals and the "
+            "geodesics followed by freely moving bodies and light."
+        ),
+    },
+    {
+        "level": "Expert",
+        "question": "Which of the following is a prediction of general relativity?",
+        "choice_a": "Gravitational waves",
+        "choice_b": "The photoelectric effect",
+        "choice_c": "Nuclear fission",
+        "choice_d": "Quantum entanglement",
+        "correct_answer": "A",
+        "answer_explanation": (
+            "General relativity predicts gravitational waves, later confirmed "
+            "by LIGO in 2015."
+        ),
+    },
 ]
 
 
@@ -490,9 +782,9 @@ def _upsert_connections(
     return results
 
 
-def _upsert_quiz(db: Session, contribution_id: int):
+def _upsert_quiz(db: Session, contribution_id: int, rows: list[dict]):
     results = []
-    for row in PHOTOELECTRIC_QUIZ:
+    for row in rows:
         data = QuizQuestionCreate(contribution_id=contribution_id, **row)
         question = quiz_question_repository.get_by_contribution_and_question(
             db, contribution_id, data.question
@@ -566,7 +858,8 @@ def seed_einstein_education(db: Session) -> dict:
         RELATIVITY_CONNECTIONS,
         related_prize_id=prize_2017.prize_id,
     )
-    quiz = _upsert_quiz(db, photoelectric.contribution_id)
+    photo_quiz = _upsert_quiz(db, photoelectric.contribution_id, PHOTOELECTRIC_QUIZ)
+    relativity_quiz = _upsert_quiz(db, relativity.contribution_id, RELATIVITY_QUIZ)
 
     return {
         "einstein_id": einstein.laureate_id,
@@ -578,7 +871,8 @@ def seed_einstein_education(db: Session) -> dict:
         "relativity_explanations": len(relativity_explanations),
         "photoelectric_connections": len(photo_connections),
         "relativity_connections": len(relativity_connections),
-        "quiz_questions": len(quiz),
+        "photoelectric_quiz_questions": len(photo_quiz),
+        "relativity_quiz_questions": len(relativity_quiz),
     }
 
 

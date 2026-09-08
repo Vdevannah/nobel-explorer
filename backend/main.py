@@ -11,6 +11,7 @@ from backend.routes.health import router as health_router
 from backend.routes.institutions import router as institutions_router
 from backend.routes.laureates import router as laureates_router
 from backend.routes.prizes import router as prizes_router
+from backend.routes.quiz_questions import router as quiz_questions_router
 from backend.services.exceptions import ResourceNotFoundError, ServiceValidationError
 
 
@@ -40,7 +41,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONTEND_ORIGINS,
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["Accept", "Content-Type"],
 )
 
@@ -74,6 +75,7 @@ app.include_router(contributions_router)
 app.include_router(institutions_router)
 app.include_router(laureates_router)
 app.include_router(prizes_router)
+app.include_router(quiz_questions_router)
 
 
 @app.get("/")

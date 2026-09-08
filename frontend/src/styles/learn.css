@@ -184,18 +184,34 @@
   line-height: 1.45;
 }
 
+.learn-lesson-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: auto;
+  padding-top: var(--space-1);
+}
+
 .learn-quiz-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  color: var(--color-gold-light);
+  color: color-mix(in srgb, var(--color-purple-light) 78%, var(--color-text-secondary));
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.learn-quiz-badge--link {
+  text-decoration: none;
+}
+
+.learn-quiz-badge--link:hover,
+.learn-quiz-badge--link:focus-visible {
+  color: var(--color-purple-light);
+  text-decoration: underline;
 }
 
 .learn-lesson-cta {
-  margin-top: auto;
-  padding-top: var(--space-1);
   color: var(--color-gold-light);
   font-size: 0.85rem;
   font-weight: 750;

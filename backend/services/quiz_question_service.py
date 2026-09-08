@@ -2,7 +2,11 @@ from sqlalchemy.orm import Session
 
 from backend.models.quiz_question import QuizQuestion
 from backend.repositories import contribution_repository, quiz_question_repository
-from backend.schemas.quiz_question import QuizQuestionCreate, QuizQuestionUpdate
+from backend.schemas.quiz_question import (
+    QuizAnswerReviewResponse,
+    QuizQuestionCreate,
+    QuizQuestionUpdate,
+)
 from backend.services.exceptions import ResourceNotFoundError
 
 
@@ -19,6 +23,22 @@ def list_quiz_questions(
     _require_contribution(db, contribution_id)
     return quiz_question_repository.get_by_contribution(
         db, contribution_id, level
+    )
+
+
+def check_answer(
+    db: Session,
+    question_id: int,
+    selected_answer: str,
+) -> QuizAnswerReviewResponse:
+    question = quiz_question_repository.get_by_id(db, question_id)
+    if question is None:
+        raise ResourceNotFoundError("QuizQuestion", question_id)
+    return QuizAnswerReviewResponse(
+        question_id=question.question_id,
+        correct=selected_answer == question.correct_answer,
+        correct_answer=question.correct_answer,
+        answer_explanation=question.answer_explanation,
     )
 
 

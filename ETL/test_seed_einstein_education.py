@@ -148,11 +148,35 @@ def test_einstein_seed_is_idempotent_and_complete():
             if connection.title == "Gravitational Waves"
         )
         assert gravitational_waves.related_prize_id == first["related_2017_prize_id"]
-        assert len(
-            quiz_question_repository.get_by_contribution(
-                db, photoelectric.contribution_id
-            )
-        ) == 4
+        photoelectric_quiz = quiz_question_repository.get_by_contribution(
+            db, photoelectric.contribution_id
+        )
+        assert len(photoelectric_quiz) == 12
+        photoelectric_quiz_by_level = {}
+        for quiz_question in photoelectric_quiz:
+            photoelectric_quiz_by_level.setdefault(quiz_question.level, 0)
+            photoelectric_quiz_by_level[quiz_question.level] += 1
+        assert photoelectric_quiz_by_level == {
+            "Simple": 3,
+            "Explore": 3,
+            "Advanced": 3,
+            "Expert": 3,
+        }
+
+        relativity_quiz = quiz_question_repository.get_by_contribution(
+            db, relativity.contribution_id
+        )
+        assert len(relativity_quiz) == 12
+        relativity_quiz_by_level = {}
+        for quiz_question in relativity_quiz:
+            relativity_quiz_by_level.setdefault(quiz_question.level, 0)
+            relativity_quiz_by_level[quiz_question.level] += 1
+        assert relativity_quiz_by_level == {
+            "Simple": 3,
+            "Explore": 3,
+            "Advanced": 3,
+            "Expert": 3,
+        }
     finally:
         db.rollback()
         db.close()

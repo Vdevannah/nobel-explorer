@@ -12,6 +12,7 @@ import "./styles/laureate-detail.css";
 import "./styles/prizes.css";
 import "./styles/analytics.css";
 import "./styles/learn.css";
+import "./styles/quiz.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
