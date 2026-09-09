@@ -42,8 +42,19 @@ def _validate_year_range(
         )
 
 
-def get_summary(db: Session) -> AnalyticsSummaryResponse:
-    gender_counts = dict(analytics_repository.get_overall_gender_counts(db))
+def get_summary(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> AnalyticsSummaryResponse:
+    _validate_year_range(start_year, end_year)
+
+    gender_counts = dict(
+        analytics_repository.get_overall_gender_counts(
+            db, category, start_year, end_year
+        )
+    )
     women_laureates = gender_counts.get("female", 0)
     total_gendered = sum(gender_counts.values())
     women_percentage = (
@@ -52,9 +63,15 @@ def get_summary(db: Session) -> AnalyticsSummaryResponse:
     )
 
     return AnalyticsSummaryResponse(
-        total_laureates=analytics_repository.count_total_laureates(db),
-        total_prizes=analytics_repository.count_total_prizes(db),
-        total_countries=analytics_repository.count_distinct_birth_countries(db),
+        total_laureates=analytics_repository.count_total_laureates(
+            db, category, start_year, end_year
+        ),
+        total_prizes=analytics_repository.count_total_prizes(
+            db, category, start_year, end_year
+        ),
+        total_countries=analytics_repository.count_distinct_birth_countries(
+            db, category, start_year, end_year
+        ),
         women_laureates=women_laureates,
         women_percentage=women_percentage
     )

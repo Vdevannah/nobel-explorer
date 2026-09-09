@@ -28,37 +28,122 @@ def _year_range_conditions(
     return conditions
 
 
-def count_total_laureates(db: Session) -> int:
-    statement = select(
-        func.count(Laureate.laureate_id)
+def count_total_laureates(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> int:
+    # Joining through LaureatePrize/Prize (rather than a plain count of
+    # all Laureate rows) is a no-op when no filters are supplied: every
+    # laureate is tied to at least one Prize, so the distinct-through-join
+    # count matches the unfiltered total exactly (verified against the
+    # 1,018-laureate baseline). This lets the same query serve both the
+    # unfiltered summary and the Phase 10D category/start_year/end_year
+    # filtered summary.
+    conditions = _year_range_conditions(start_year, end_year)
+    if category is not None:
+        conditions.append(Category.name == category)
+
+    statement = (
+        select(
+            func.count(func.distinct(Laureate.laureate_id))
+        )
+        .join(
+            LaureatePrize,
+            LaureatePrize.laureate_id == Laureate.laureate_id
+        )
+        .join(
+            Prize,
+            Prize.prize_id == LaureatePrize.prize_id
+        )
     )
+    if category is not None:
+        statement = statement.join(
+            Category,
+            Category.category_id == Prize.category_id
+        )
+    if conditions:
+        statement = statement.where(*conditions)
 
     return db.scalar(statement) or 0
 
 
-def count_total_prizes(db: Session) -> int:
+def count_total_prizes(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> int:
+    conditions = _year_range_conditions(start_year, end_year)
+    if category is not None:
+        conditions.append(Category.name == category)
+
     statement = select(
-        func.count(Prize.prize_id)
+        func.count(func.distinct(Prize.prize_id))
     )
+    if category is not None:
+        statement = statement.join(
+            Category,
+            Category.category_id == Prize.category_id
+        )
+    if conditions:
+        statement = statement.where(*conditions)
 
     return db.scalar(statement) or 0
 
 
-def count_distinct_birth_countries(db: Session) -> int:
+def count_distinct_birth_countries(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> int:
+    conditions = [
+        Laureate.birth_country.is_not(None),
+        Laureate.laureate_type == "Person",
+        *_year_range_conditions(start_year, end_year)
+    ]
+    if category is not None:
+        conditions.append(Category.name == category)
+
     statement = (
         select(
             func.count(func.distinct(Laureate.birth_country))
         )
-        .where(
-            Laureate.birth_country.is_not(None),
-            Laureate.laureate_type == "Person"
+        .join(
+            LaureatePrize,
+            LaureatePrize.laureate_id == Laureate.laureate_id
+        )
+        .join(
+            Prize,
+            Prize.prize_id == LaureatePrize.prize_id
         )
     )
+    if category is not None:
+        statement = statement.join(
+            Category,
+            Category.category_id == Prize.category_id
+        )
+    statement = statement.where(*conditions)
 
     return db.scalar(statement) or 0
 
 
-def get_overall_gender_counts(db: Session) -> list[tuple[str, int]]:
+def get_overall_gender_counts(
+    db: Session,
+    category: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None
+) -> list[tuple[str, int]]:
+    conditions = [
+        Laureate.laureate_type == "Person",
+        Laureate.gender.is_not(None),
+        *_year_range_conditions(start_year, end_year)
+    ]
+    if category is not None:
+        conditions.append(Category.name == category)
+
     statement = (
         select(
             Laureate.gender,
@@ -66,12 +151,21 @@ def get_overall_gender_counts(db: Session) -> list[tuple[str, int]]:
                 func.distinct(Laureate.laureate_id)
             ).label("laureate_count")
         )
-        .where(
-            Laureate.laureate_type == "Person",
-            Laureate.gender.is_not(None)
+        .join(
+            LaureatePrize,
+            LaureatePrize.laureate_id == Laureate.laureate_id
         )
-        .group_by(Laureate.gender)
+        .join(
+            Prize,
+            Prize.prize_id == LaureatePrize.prize_id
+        )
     )
+    if category is not None:
+        statement = statement.join(
+            Category,
+            Category.category_id == Prize.category_id
+        )
+    statement = statement.where(*conditions).group_by(Laureate.gender)
 
     return list(db.execute(statement).all())
 

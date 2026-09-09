@@ -47,11 +47,31 @@ END_YEAR_FILTER_DESCRIPTION = "Optional inclusive end year (Nobel-era year, e.g.
         "Returns counts of all laureate rows (people and organizations), "
         "Prize rows, distinct recorded birth countries among people, women "
         "among people with known gender, and that count as a percentage of "
-        "people with known gender."
+        "people with known gender. Optionally narrowed by category and/or "
+        "start_year/end_year (Phase 10D filter set), matching the same "
+        "semantics as the other dashboard endpoints."
     ),
 )
-def get_summary(db: Session = Depends(get_db)):
-    return analytics_service.get_summary(db)
+def get_summary(
+    category: str | None = Query(
+        default=None,
+        description=CATEGORY_FILTER_DESCRIPTION
+    ),
+    start_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=START_YEAR_FILTER_DESCRIPTION
+    ),
+    end_year: int | None = Query(
+        default=None,
+        ge=MIN_NOBEL_YEAR,
+        le=MAX_NOBEL_YEAR,
+        description=END_YEAR_FILTER_DESCRIPTION
+    ),
+    db: Session = Depends(get_db)
+):
+    return analytics_service.get_summary(db, category, start_year, end_year)
 
 
 @router.get(

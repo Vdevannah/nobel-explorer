@@ -513,6 +513,12 @@ def test_analytics_repository_dashboard_metrics():
         baseline_top_countries = dict(
             get_top_birth_countries(db, limit=1000)
         )
+        baseline_laureates_1930 = count_total_laureates(
+            db, start_year=1930, end_year=1930
+        )
+        baseline_prizes_1930 = count_total_prizes(
+            db, start_year=1930, end_year=1930
+        )
 
         extra_category = Category(
             name="Test Analytics Extra",
@@ -601,6 +607,40 @@ def test_analytics_repository_dashboard_metrics():
         }
         assert era_1901_1950["female"] >= 1
         assert era_1901_1950["male"] >= 1
+
+        # Phase 10G: the same category/start_year/end_year filters that
+        # narrow the other dashboard queries also narrow the four summary
+        # totals -- category alone, year alone, and combined.
+
+        assert count_total_laureates(db, category="Test Analytics Extra") == 2
+        assert count_total_prizes(db, category="Test Analytics Extra") == 2
+        assert count_distinct_birth_countries(
+            db, category="Test Analytics Extra"
+        ) == 1
+        gender_by_category = dict(
+            get_overall_gender_counts(db, category="Test Analytics Extra")
+        )
+        assert gender_by_category == {"female": 1, "male": 1}
+
+        assert count_total_laureates(
+            db, start_year=1930, end_year=1930
+        ) == baseline_laureates_1930 + 2
+        assert count_total_prizes(
+            db, start_year=1930, end_year=1930
+        ) == baseline_prizes_1930 + 2
+
+        assert count_total_laureates(
+            db,
+            category="Test Analytics Extra",
+            start_year=1930,
+            end_year=1930
+        ) == 2
+        assert count_total_laureates(
+            db,
+            category="Test Analytics Extra",
+            start_year=1931,
+            end_year=1940
+        ) == 0
 
         print("\nAnalytics repository dashboard metrics test passed.")
 

@@ -151,15 +151,19 @@ function analyticsRequest(path, params = {}, signal) {
   return apiRequest(`/analytics/${path}${query ? `?${query}` : ""}`, { signal });
 }
 
-export function getAnalyticsSummary({ signal } = {}) {
-  return analyticsRequest("summary", {}, signal);
-}
-
 // Phase 10D: the small, consistent category/start_year/end_year filter
 // set shared by the dashboard trend endpoints. All three are optional;
 // omitted values are simply left out of the query string.
 function withYearRangeFilters({ category = "", startYear = "", endYear = "" } = {}) {
   return { category, start_year: startYear, end_year: endYear };
+}
+
+export function getAnalyticsSummary({ category, startYear, endYear, signal } = {}) {
+  return analyticsRequest(
+    "summary",
+    withYearRangeFilters({ category, startYear, endYear }),
+    signal,
+  );
 }
 
 export function getAnalyticsCategoryCounts({ startYear, endYear, signal } = {}) {

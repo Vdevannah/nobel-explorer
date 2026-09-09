@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   getAnalyticsAgeDistribution,
-  getAnalyticsCategoriesByDecade,
   getAnalyticsCategoryCounts,
   getAnalyticsForCategory,
   getAnalyticsPrizesByDecade,
@@ -15,14 +14,10 @@ import { getCountryFlag } from "../utils/countryFlags";
 
 const CHART_COLORS = ["#7c4dff", "#b339e7", "#f04468", "#e8b83e", "#72c77b", "#43c1b5"];
 
-const DISCOVERY_QUESTIONS = [
-  { icon: "🌍", question: "Which countries have the most Nobel laureates?", target: "#top-countries" },
-  { icon: "🏆", question: "Which category has the most Nobel Prizes?", target: "#category-donut" },
-  { icon: "♀", question: "Has the number of women Nobel laureates changed over time?", target: "#women-trend" },
-  { icon: "🎂", question: "What age are scientists typically when they receive a Nobel Prize?", target: "#age-distribution" },
-  { icon: "📈", question: "Are more Nobel Prizes being awarded today than in the past?", target: "#prizes-through-time" },
-  { icon: "🔬", question: "How has Nobel recognition across fields changed over time?", target: "#categories-through-time" },
-];
+// Mirrors the backend's MIN_NOBEL_YEAR / MAX_NOBEL_YEAR (backend/routes/analytics.py)
+// so invalid years are caught here before a request is ever sent.
+const MIN_ANALYTICS_YEAR = 1901;
+const MAX_ANALYTICS_YEAR = 2100;
 
 const DID_YOU_KNOW_FACTS = [
   "Marie Curie is the only person to win Nobel Prizes in two different sciences: Physics (1903) and Chemistry (1911).",
@@ -31,6 +26,47 @@ const DID_YOU_KNOW_FACTS = [
   "The Nobel Memorial Prize in Economic Sciences was added in 1968 and isn't one of the five original prizes from Alfred Nobel's will.",
   "In 1974, the Nobel Foundation decided prizes generally cannot be awarded posthumously.",
 ];
+
+const DEEP_DIVE_TABS = [
+  { id: "countries", label: "Countries" },
+  { id: "states", label: "U.S. States" },
+  { id: "institutions", label: "Institutions" },
+  { id: "gender", label: "Gender" },
+];
+
+const DEFAULT_DEEP_DIVE_CATEGORY = "Physics";
+
+// .panel-kicker is uppercased by CSS (text-transform: uppercase), so
+// these helpers return natural casing and let the stylesheet do the
+// visual all-caps treatment -- consistent with every other kicker on
+// this page ("Birthplace", "Award-time affiliations", etc).
+function formatYearRangeLabel(startYear, endYear) {
+  if (startYear && endYear) return `${startYear}–${endYear}`;
+  if (startYear) return `${startYear}–present`;
+  if (endYear) return `1901–${endYear}`;
+  return "1901–present";
+}
+
+// Eyebrow for every chart whose backend endpoint already supports the
+// applied category/start_year/end_year filters, so the label never
+// claims "all categories" for data that has actually been narrowed.
+function formatFilterEyebrow(category, startYear, endYear) {
+  const yearLabel = formatYearRangeLabel(startYear, endYear);
+  if (!category) return `All categories · ${yearLabel}`;
+  if (!startYear && !endYear) return category;
+  return `${category} · ${yearLabel}`;
+}
+
+// "Laureates by Category" is an intentional exception -- it exists to
+// compare categories against each other, so it never narrows by the
+// applied category even though the KPIs and other charts do. It still
+// respects the applied year range (its backend endpoint supports that),
+// so the eyebrow reflects the year scope without implying a category
+// filter was applied.
+function formatCategoryComparisonEyebrow(startYear, endYear) {
+  if (!startYear && !endYear) return "Category comparison";
+  return `Category comparison · ${formatYearRangeLabel(startYear, endYear)}`;
+}
 
 function MetricCard({ icon, label, value, detail }) {
   return (
@@ -105,11 +141,11 @@ function CategoryDonut({ data }) {
 
 function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ariaLabel, emptyMessage }) {
   const width = 720;
-  const height = 230;
+  const height = 160;
   const maximum = Math.max(...data.map((item) => item[yKey]), 1);
   const points = data.map((item, index) => {
     const x = data.length === 1 ? width / 2 : 20 + (index / (data.length - 1)) * (width - 40);
-    const y = height - 32 - (item[yKey] / maximum) * (height - 60);
+    const y = height - 28 - (item[yKey] / maximum) * (height - 48);
     return { ...item, x, y };
   });
 
@@ -118,16 +154,16 @@ function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ari
   return (
     <div className="decade-chart">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={ariaLabel}>
-        <line className="chart-axis" x1="20" x2={width - 20} y1={height - 32} y2={height - 32} />
+        <line className="chart-axis" x1="20" x2={width - 20} y1={height - 28} y2={height - 28} />
         <polyline className="chart-line" points={points.map(({ x, y }) => `${x},${y}`).join(" ")} />
         {points.map((point, index) => (
           <g key={point[xKey]}>
             <circle className="chart-point" cx={point.x} cy={point.y} r="5">
               <title>{formatTooltip ? formatTooltip(point) : `${formatX(point[xKey])}: ${formatY(point[yKey])}`}</title>
             </circle>
-            <text x={point.x} y={point.y - 14} textAnchor="middle" className="chart-point-value">{formatY(point[yKey])}</text>
+            <text x={point.x} y={point.y - 10} textAnchor="middle" className="chart-point-value">{formatY(point[yKey])}</text>
             {(data.length <= 6 || index % 2 === 0 || index === points.length - 1) && (
-              <text x={point.x} y={height - 10} textAnchor="middle">{formatX(point[xKey])}</text>
+              <text x={point.x} y={height - 6} textAnchor="middle">{formatX(point[xKey])}</text>
             )}
           </g>
         ))}
@@ -139,70 +175,6 @@ function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ari
       <ul className="visually-hidden">
         {points.map((point) => (
           <li key={point[xKey]}>{formatX(point[xKey])}: {formatY(point[yKey])}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function CategoryTrendChart({ data, categoryColors, emptyMessage }) {
-  const width = 720;
-  const height = 230;
-
-  if (!data.length) return <p className="analytics-empty">{emptyMessage}</p>;
-
-  const decades = [...new Set(data.map((item) => item.decade))].sort((a, b) => a - b);
-  const categoryNames = [...new Set(data.map((item) => item.category))];
-  const lookup = new Map(data.map((item) => [`${item.decade}|${item.category}`, item.laureate_count]));
-  const maximum = Math.max(...data.map((item) => item.laureate_count), 1);
-
-  const xFor = (index) => (decades.length === 1 ? width / 2 : 20 + (index / (decades.length - 1)) * (width - 40));
-  const yFor = (count) => height - 32 - (count / maximum) * (height - 60);
-
-  const series = categoryNames.map((category) => {
-    const points = decades.map((decade, index) => {
-      const count = lookup.get(`${decade}|${category}`) || 0;
-      return { decade, count, x: xFor(index), y: yFor(count) };
-    });
-    return {
-      category,
-      color: categoryColors[category] || "#7c4dff",
-      points,
-      // Shown in the legend so the exact figure isn't conveyed by line
-      // color/position alone, and so screen readers (which can't read
-      // an svg role="img"'s internal <text>/<title> content) still get
-      // a concrete number for each category via this plain-text legend.
-      totalCount: points.reduce((sum, point) => sum + point.count, 0),
-    };
-  });
-
-  return (
-    <div className="decade-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Distinct laureates per category, by decade">
-        <line className="chart-axis" x1="20" x2={width - 20} y1={height - 32} y2={height - 32} />
-        {series.map((line) => (
-          <g key={line.category}>
-            <polyline className="chart-line" style={{ stroke: line.color }} points={line.points.map(({ x, y }) => `${x},${y}`).join(" ")} />
-            {line.points.map((point) => (
-              <circle className="category-trend-point" key={point.decade} cx={point.x} cy={point.y} r="3.5" style={{ fill: line.color }}>
-                <title>{line.category}, {point.decade}s: {point.count} laureates</title>
-              </circle>
-            ))}
-          </g>
-        ))}
-        {decades.map((decade, index) => (
-          (decades.length <= 8 || index % 2 === 0 || index === decades.length - 1) && (
-            <text key={decade} x={xFor(index)} y={height - 10} textAnchor="middle">{decade}s</text>
-          )
-        ))}
-      </svg>
-      <ul className="analytics-legend-inline">
-        {series.map((line) => (
-          <li key={line.category}>
-            <i style={{ background: line.color }} aria-hidden="true" />
-            <span>{line.category}</span>
-            <strong>{line.totalCount}</strong>
-          </li>
         ))}
       </ul>
     </div>
@@ -232,22 +204,6 @@ function AgeBarChart({ data }) {
   );
 }
 
-function DiscoveryQuestions() {
-  return (
-    <section className="discovery-section" aria-label="What can you discover from the data">
-      <h2>🔎 What can you discover from the data?</h2>
-      <div className="discovery-grid">
-        {DISCOVERY_QUESTIONS.map((item) => (
-          <a className="discovery-question-card" href={item.target} key={item.question}>
-            <span aria-hidden="true">{item.icon}</span>
-            <p>{item.question}</p>
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function DidYouKnow() {
   const fact = useMemo(
     () => DID_YOU_KNOW_FACTS[Math.floor(Math.random() * DID_YOU_KNOW_FACTS.length)],
@@ -262,6 +218,44 @@ function DidYouKnow() {
   );
 }
 
+function DeepDiveTabs({ activeTab, onChange }) {
+  function handleKeyDown(event) {
+    const currentIndex = DEEP_DIVE_TABS.findIndex((tab) => tab.id === activeTab);
+    let nextIndex = null;
+
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % DEEP_DIVE_TABS.length;
+    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + DEEP_DIVE_TABS.length) % DEEP_DIVE_TABS.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = DEEP_DIVE_TABS.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    onChange(DEEP_DIVE_TABS[nextIndex].id);
+    event.currentTarget.parentElement.children[nextIndex].focus();
+  }
+
+  return (
+    <div className="analytics-tabs" role="tablist" aria-label="Category deep-dive views">
+      {DEEP_DIVE_TABS.map((tab) => (
+        <button
+          className={`analytics-tab${activeTab === tab.id ? " analytics-tab--active" : ""}`}
+          id={`deep-dive-tab-${tab.id}`}
+          type="button"
+          role="tab"
+          aria-controls={`deep-dive-panel-${tab.id}`}
+          aria-selected={activeTab === tab.id}
+          tabIndex={activeTab === tab.id ? 0 : -1}
+          onClick={() => onChange(tab.id)}
+          onKeyDown={handleKeyDown}
+          key={tab.id}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function AnalyticsPage() {
   const [summary, setSummary] = useState(null);
   const [categoryCounts, setCategoryCounts] = useState([]);
@@ -269,69 +263,110 @@ function AnalyticsPage() {
   const [topCountries, setTopCountries] = useState([]);
   const [ageDistribution, setAgeDistribution] = useState([]);
   const [womenByEra, setWomenByEra] = useState([]);
-  const [categoriesByDecade, setCategoriesByDecade] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("Physics");
+  const [selectedCategory, setSelectedCategory] = useState(DEFAULT_DEEP_DIVE_CATEGORY);
   const [categoryAnalytics, setCategoryAnalytics] = useState(null);
+  const [deepDiveTab, setDeepDiveTab] = useState("countries");
   const [globalStatus, setGlobalStatus] = useState("loading");
   const [categoryStatus, setCategoryStatus] = useState("loading");
   const [retryKey, setRetryKey] = useState(0);
 
-  // Phase 10D: the small, consistent dashboard-wide filter set. Empty
-  // string means "no filter" for all three -- this is intentionally
-  // separate from `selectedCategory` below, which always holds a real
-  // category and drives the category-required deep-dive section further
-  // down the page.
+  // Filter UX fix: `draft*` state tracks whatever is currently in the
+  // filter controls (updated on every keystroke/selection), while
+  // `filter*` state is the APPLIED set the fetch effect below actually
+  // depends on. Nothing reaches `filter*` without first passing
+  // validateDraftFilters -- so the fetch effect can assume its inputs
+  // are always either empty or a complete, in-range, correctly-ordered
+  // year, and never needs to special-case an in-progress/partial value.
+  // This is intentionally separate from `selectedCategory` below, which
+  // always holds a real category and drives the category-required
+  // deep-dive section further down the page.
+  const [draftCategory, setDraftCategory] = useState("");
+  const [draftStartYear, setDraftStartYear] = useState("");
+  const [draftEndYear, setDraftEndYear] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStartYear, setFilterStartYear] = useState("");
   const [filterEndYear, setFilterEndYear] = useState("");
+  const [filterError, setFilterError] = useState(null);
 
-  const yearRangeInvalid = Boolean(
-    filterStartYear && filterEndYear && Number(filterStartYear) > Number(filterEndYear),
+  const hasDraftOrAppliedFilters = Boolean(
+    draftCategory || draftStartYear || draftEndYear || filterCategory || filterStartYear || filterEndYear,
   );
 
-  const resetFilters = () => {
+  function validateYearField(value, label) {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (!/^\d+$/.test(trimmed)) return `${label} must be a valid year.`;
+    const year = Number(trimmed);
+    if (year < MIN_ANALYTICS_YEAR || year > MAX_ANALYTICS_YEAR) {
+      return `${label} must be between ${MIN_ANALYTICS_YEAR} and ${MAX_ANALYTICS_YEAR}.`;
+    }
+    return null;
+  }
+
+  function validateDraftFilters(startYearValue, endYearValue) {
+    const startError = validateYearField(startYearValue, "Start year");
+    if (startError) return startError;
+    const endError = validateYearField(endYearValue, "End year");
+    if (endError) return endError;
+    const trimmedStart = startYearValue.trim();
+    const trimmedEnd = endYearValue.trim();
+    if (trimmedStart && trimmedEnd && Number(trimmedStart) > Number(trimmedEnd)) {
+      return "Start year must be earlier than or equal to end year.";
+    }
+    return null;
+  }
+
+  function applyFilters() {
+    const error = validateDraftFilters(draftStartYear, draftEndYear);
+    if (error) {
+      setFilterError(error);
+      return;
+    }
+    setFilterError(null);
+    setFilterCategory(draftCategory);
+    setFilterStartYear(draftStartYear.trim());
+    setFilterEndYear(draftEndYear.trim());
+    // Sync Deep Dive to the newly-applied global category so the two
+    // don't visibly disagree right after Apply. Deep Dive stays an
+    // independent control after this: the user can change it manually
+    // afterward without that choice being overwritten until the next
+    // Apply with a non-empty category.
+    if (draftCategory) {
+      setSelectedCategory(draftCategory);
+    }
+  }
+
+  function resetFilters() {
+    setDraftCategory("");
+    setDraftStartYear("");
+    setDraftEndYear("");
     setFilterCategory("");
     setFilterStartYear("");
     setFilterEndYear("");
-  };
+    setFilterError(null);
+    setSelectedCategory(DEFAULT_DEEP_DIVE_CATEGORY);
+  }
 
   useEffect(() => {
-    if (yearRangeInvalid) {
-      // If an in-flight request from a previous (valid) filter change
-      // gets aborted by this effect re-running, its AbortError is
-      // swallowed below and never resolves globalStatus out of
-      // "loading" -- without this, an invalid range typed right after a
-      // valid one could leave the page stuck on the loading spinner
-      // forever. Falling back to "success" re-shows the last good
-      // dashboard (with the inline range error already visible above
-      // it) instead of a permanent spinner; only do this once real data
-      // exists, so the very first page load never renders `summary` etc.
-      // while still null.
-      if (summary) setGlobalStatus("success");
-      return undefined;
-    }
-
     const controller = new AbortController();
     setGlobalStatus("loading");
     const filters = { category: filterCategory, startYear: filterStartYear, endYear: filterEndYear, signal: controller.signal };
     Promise.all([
-      getAnalyticsSummary({ signal: controller.signal }),
+      getAnalyticsSummary(filters),
       getAnalyticsCategoryCounts({ startYear: filterStartYear, endYear: filterEndYear, signal: controller.signal }),
       getAnalyticsPrizesByDecade(filters),
       getAnalyticsTopCountries({ limit: 5, ...filters }),
       getAnalyticsAgeDistribution(filters),
       getAnalyticsWomenByEra(filters),
-      getAnalyticsCategoriesByDecade(filters),
       getCategories({ signal: controller.signal }),
-    ]).then(([summaryData, categoryData, decadeData, countryData, ageData, womenData, categoryDecadeData, categoryOptions]) => {
+    ]).then(([summaryData, categoryData, decadeData, countryData, ageData, womenData, categoryOptions]) => {
       setSummary(summaryData);
       setCategoryCounts(categoryData);
       setPrizesByDecade(decadeData);
       setTopCountries(countryData);
       setAgeDistribution(ageData);
       setWomenByEra(womenData);
-      setCategoriesByDecade(categoryDecadeData);
       setCategories(categoryOptions);
       if (!categoryOptions.some((item) => item.name === selectedCategory) && categoryOptions[0]) {
         setSelectedCategory(categoryOptions[0].name);
@@ -344,7 +379,7 @@ function AnalyticsPage() {
       }
     });
     return () => controller.abort();
-  }, [retryKey, filterCategory, filterStartYear, filterEndYear, yearRangeInvalid]);
+  }, [retryKey, filterCategory, filterStartYear, filterEndYear]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -365,13 +400,6 @@ function AnalyticsPage() {
     [categoryAnalytics],
   );
 
-  // Shared category -> color mapping so the donut and the categories-
-  // by-decade trend chart use the same color for the same category.
-  const categoryColors = useMemo(
-    () => Object.fromEntries(categoryCounts.map((item, index) => [item.category, CHART_COLORS[index % CHART_COLORS.length]])),
-    [categoryCounts],
-  );
-
   if (globalStatus === "error") {
     return <div className="analytics-page container"><div className="analytics-state" role="alert"><h1>Analytics are temporarily unavailable.</h1><button className="button button-primary" onClick={() => setRetryKey((key) => key + 1)} type="button">Try again</button></div></div>;
   }
@@ -389,25 +417,28 @@ function AnalyticsPage() {
       <section className="analytics-filter-bar container" aria-label="Filter dashboard totals and trends">
         <label className="analytics-category-control" htmlFor="dashboard-filter-category">
           Category
-          <select id="dashboard-filter-category" value={filterCategory} onChange={(event) => setFilterCategory(event.target.value)}>
+          <select id="dashboard-filter-category" value={draftCategory} onChange={(event) => setDraftCategory(event.target.value)}>
             <option value="">All categories</option>
             {categories.map((category) => <option key={category.category_id} value={category.name}>{category.name}</option>)}
           </select>
         </label>
         <label className="analytics-category-control" htmlFor="dashboard-filter-start-year">
           Start year
-          <input id="dashboard-filter-start-year" type="number" inputMode="numeric" min="1901" max="2100" placeholder="e.g. 1950" value={filterStartYear} onChange={(event) => setFilterStartYear(event.target.value)} />
+          <input id="dashboard-filter-start-year" type="text" inputMode="numeric" maxLength={4} placeholder="e.g. 1950" value={draftStartYear} onChange={(event) => setDraftStartYear(event.target.value)} />
         </label>
         <label className="analytics-category-control" htmlFor="dashboard-filter-end-year">
           End year
-          <input id="dashboard-filter-end-year" type="number" inputMode="numeric" min="1901" max="2100" placeholder="e.g. 2000" value={filterEndYear} onChange={(event) => setFilterEndYear(event.target.value)} />
+          <input id="dashboard-filter-end-year" type="text" inputMode="numeric" maxLength={4} placeholder="e.g. 2000" value={draftEndYear} onChange={(event) => setDraftEndYear(event.target.value)} />
         </label>
         <div className="analytics-filter-actions">
-          <button className="button button-secondary" type="button" onClick={resetFilters} disabled={!filterCategory && !filterStartYear && !filterEndYear}>
+          <button className="button button-primary" type="button" onClick={applyFilters}>
+            Apply Filters
+          </button>
+          <button className="button button-secondary" type="button" onClick={resetFilters} disabled={!hasDraftOrAppliedFilters}>
             Reset
           </button>
         </div>
-        {yearRangeInvalid && <p className="analytics-filter-error" role="alert">Start year must be on or before end year.</p>}
+        {filterError && <p className="analytics-filter-error" role="alert">{filterError}</p>}
       </section>
 
       {globalStatus === "loading" ? <div className="analytics-loading container" role="status">Loading Nobel analytics…</div> : (
@@ -416,34 +447,32 @@ function AnalyticsPage() {
             <MetricCard icon="🏆" label="Nobel Prizes" value={summary.total_prizes.toLocaleString()} detail="Awarded since 1901" />
             <MetricCard icon="👥" label="Laureates" value={summary.total_laureates.toLocaleString()} detail="Laureates honored (people and organizations)" />
             <MetricCard icon="🌍" label="Countries" value={summary.total_countries.toLocaleString()} detail="Represented" />
-            <MetricCard icon="♀" label="Women Laureates" value={summary.women_laureates.toLocaleString()} detail={`${summary.women_percentage}% of total`} />
+            <MetricCard icon="👩" label="Women Laureates" value={summary.women_laureates.toLocaleString()} detail={`${summary.women_percentage}% of total`} />
           </section>
 
           <section className="analytics-grid analytics-grid-top">
-            <article className="analytics-panel" id="prizes-through-time"><header><div><p className="panel-kicker">1901–present</p><h2>Nobel Prizes Through Time</h2></div></header><TrendLineChart data={prizesByDecade} xKey="decade" yKey="prize_count" formatX={(decade) => `${decade}s`} formatY={(count) => count} ariaLabel="Number of prizes awarded per decade" emptyMessage="No decade data is available." /></article>
-            <article className="analytics-panel analytics-panel-wide" id="category-donut"><header><div><p className="panel-kicker">All categories</p><h2>Laureates by Category</h2></div></header><CategoryDonut data={categoryCounts} /></article>
-          </section>
-
-          <section className="analytics-grid analytics-grid-single" id="categories-through-time">
-            <article className="analytics-panel">
-              <header><div><p className="panel-kicker">{filterCategory || "All categories"}</p><h2>Nobel Recognition Across Fields</h2><p className="panel-note">Distinct laureates per category, by decade{filterCategory ? "" : " (use the Category filter above to focus on one field)"}.</p></div></header>
-              <CategoryTrendChart data={categoriesByDecade} categoryColors={categoryColors} emptyMessage="No category-by-decade data is available." />
-            </article>
+            <article className="analytics-panel" id="prizes-through-time"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p><h2>Nobel Prizes Through Time</h2></div></header><TrendLineChart data={prizesByDecade} xKey="decade" yKey="prize_count" formatX={(decade) => `${decade}s`} formatY={(count) => count} ariaLabel="Number of prizes awarded per decade" emptyMessage="No decade data is available." /></article>
+            <article className="analytics-panel analytics-panel-wide" id="category-donut"><header><div><p className="panel-kicker">{formatCategoryComparisonEyebrow(filterStartYear, filterEndYear)}</p><h2>Laureates by Category</h2><p className="panel-note">All categories shown for comparison.</p></div></header><CategoryDonut data={categoryCounts} /></article>
           </section>
 
           <section className="analytics-grid analytics-grid-trends">
-            <article className="analytics-panel" id="women-trend"><header><div><p className="panel-kicker">1901–present</p><h2>Women in Nobel History</h2><p className="panel-note">Share of women among laureates with known gender, by era. Organizations excluded.</p></div></header><TrendLineChart data={womenByEra} xKey="era" yKey="percentage" formatX={(era) => era} formatY={(percentage) => `${percentage}%`} formatTooltip={(point) => `${point.era}: ${point.percentage}% (${point.women_count} of ${point.known_gender_count} known-gender laureates)`} ariaLabel="Percentage of known-gender person laureates who are women, by era" emptyMessage="No gender history data is available." /></article>
-            <article className="analytics-panel" id="age-distribution"><header><div><p className="panel-kicker">All categories</p><h2>Age at the Time of Award</h2><p className="panel-note">Approximate age (award year minus birth year). Repeat winners may appear in more than one group.</p></div></header><AgeBarChart data={ageDistribution} /></article>
+            <article className="analytics-panel" id="women-trend"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p><h2>Women in Nobel History</h2><p className="panel-note">Share of women among laureates with known gender, by era. Organizations excluded.</p></div></header><TrendLineChart data={womenByEra} xKey="era" yKey="percentage" formatX={(era) => era} formatY={(percentage) => `${percentage}%`} formatTooltip={(point) => `${point.era}: ${point.percentage}% (${point.women_count} of ${point.known_gender_count} known-gender laureates)`} ariaLabel="Percentage of known-gender person laureates who are women, by era" emptyMessage="No gender history data is available." /></article>
+            <article className="analytics-panel" id="age-distribution"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p><h2>Age at the Time of Award</h2><p className="panel-note">Approximate age (award year minus birth year). Repeat winners may appear in more than one group.</p></div></header><AgeBarChart data={ageDistribution} /></article>
           </section>
 
-          <section className="analytics-grid analytics-grid-single" id="top-countries">
-            <article className="analytics-panel"><header><div><p className="panel-kicker">Birthplace</p><h2>Top Countries by Laureates</h2></div></header><RankedBars data={topCountries} labelKey="country" emptyMessage="No country data is available." limit={5} showRank showFlag /></article>
+          <section aria-labelledby="global-impact-title">
+            <div className="analytics-section-heading">
+              <p className="panel-kicker">Where laureates come from</p>
+              <h2 id="global-impact-title">Global Impact</h2>
+            </div>
+            <article className="analytics-panel analytics-panel-wide" id="top-countries"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p><h2>Top Countries by Laureates</h2><p className="panel-note">Birthplace, not nationality or citizenship.</p></div></header><RankedBars data={topCountries} labelKey="country" emptyMessage="No country data is available." limit={5} showRank showFlag /></article>
           </section>
 
           <section className="analytics-subsection-header">
             <div>
-              <p className="panel-kicker">Category deep-dive</p>
+              <p className="panel-kicker">{selectedCategory} · All years</p>
               <h2>Explore One Category in Depth</h2>
+              <p className="panel-note">Category detail uses all available years.</p>
             </div>
             <label className="analytics-category-control" htmlFor="deep-dive-category">
               Category
@@ -456,15 +485,42 @@ function AnalyticsPage() {
           {categoryStatus === "loading" && <div className="analytics-loading" role="status">Loading {selectedCategory} insights…</div>}
           {categoryStatus === "error" && <div className="analytics-state" role="alert"><p>Could not load {selectedCategory} insights.</p><button className="button button-secondary" onClick={() => setRetryKey((key) => key + 1)} type="button">Retry</button></div>}
           {categoryStatus === "success" && (
-            <section className="analytics-grid analytics-grid-details" aria-label={`${selectedCategory} analytics`}>
-              <article className="analytics-panel"><header><div><p className="panel-kicker">Birthplace</p><h2>{selectedCategory}: top countries</h2></div></header><RankedBars data={categoryAnalytics.countries} labelKey="country" emptyMessage="No birthplace country data is available." showFlag /></article>
-              <article className="analytics-panel"><header><div><p className="panel-kicker">USA birthplace</p><h2>{selectedCategory}: top states</h2></div></header><RankedBars data={categoryAnalytics.states} labelKey="state" emptyMessage="No U.S. state data is available." /></article>
-              <article className="analytics-panel"><header><div><p className="panel-kicker">Award-time affiliations</p><h2>{selectedCategory}: top U.S. institutions</h2></div></header><RankedBars data={categoryAnalytics.institutions} labelKey="institution" emptyMessage="No U.S. institution data is available." /></article>
-              <article className="analytics-panel"><header><div><p className="panel-kicker">Known person records</p><h2>{selectedCategory}: gender distribution</h2></div><span className="panel-total">{personGenderTotal}</span></header><RankedBars data={categoryAnalytics.gender} labelKey="gender" emptyMessage="No gender data is available." limit={6} /></article>
-            </section>
+            <div className="analytics-deep-dive" aria-label={`${selectedCategory} analytics`}>
+              <DeepDiveTabs activeTab={deepDiveTab} onChange={setDeepDiveTab} />
+              <div
+                className="analytics-panel"
+                id={`deep-dive-panel-${deepDiveTab}`}
+                role="tabpanel"
+                aria-labelledby={`deep-dive-tab-${deepDiveTab}`}
+              >
+                {deepDiveTab === "countries" && (
+                  <>
+                    <header><div><p className="panel-kicker">Birthplace</p><h2>{selectedCategory}: top countries</h2></div></header>
+                    <RankedBars data={categoryAnalytics.countries} labelKey="country" emptyMessage="No birthplace country data is available." limit={5} showFlag />
+                  </>
+                )}
+                {deepDiveTab === "states" && (
+                  <>
+                    <header><div><p className="panel-kicker">USA birthplace</p><h2>{selectedCategory}: top states</h2></div></header>
+                    <RankedBars data={categoryAnalytics.states} labelKey="state" emptyMessage="No U.S. state data is available." limit={5} />
+                  </>
+                )}
+                {deepDiveTab === "institutions" && (
+                  <>
+                    <header><div><p className="panel-kicker">Award-time affiliations</p><h2>{selectedCategory}: top U.S. institutions</h2></div></header>
+                    <RankedBars data={categoryAnalytics.institutions} labelKey="institution" emptyMessage="No U.S. institution data is available." limit={5} />
+                  </>
+                )}
+                {deepDiveTab === "gender" && (
+                  <>
+                    <header><div><p className="panel-kicker">Known person records</p><h2>{selectedCategory}: gender distribution</h2></div><span className="panel-total">{personGenderTotal}</span></header>
+                    <RankedBars data={categoryAnalytics.gender} labelKey="gender" emptyMessage="No gender data is available." limit={6} />
+                  </>
+                )}
+              </div>
+            </div>
           )}
 
-          <DiscoveryQuestions />
           <DidYouKnow />
         </main>
       )}

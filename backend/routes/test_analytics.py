@@ -387,6 +387,99 @@ def test_categories_by_decade_repeat_laureate_across_decades():
     assert physics_by_decade.get(1950, 0) >= 1
     assert physics_by_decade.get(1970, 0) >= 1
 
+
+# ============================================================
+# Phase 10G -- /analytics/summary joins the small, consistent
+# category/start_year/end_year filter set the other dashboard
+# endpoints already support, so the four KPI totals can be scoped
+# to match an applied filter instead of always showing all-time
+# values.
+# ============================================================
+
+
+def test_analytics_summary_matches_service_with_filters():
+    response = client.get(
+        "/analytics/summary",
+        params={"category": "Chemistry", "start_year": 1950, "end_year": 2000}
+    )
+
+    assert response.status_code == 200
+
+    db = SessionLocal()
+    try:
+        expected = analytics_service.get_summary(
+            db, "Chemistry", 1950, 2000
+        ).model_dump()
+    finally:
+        db.close()
+
+    assert response.json() == expected
+
+
+def test_analytics_summary_category_filter_narrows_totals():
+    all_response = client.get("/analytics/summary").json()
+    chemistry_response = client.get(
+        "/analytics/summary", params={"category": "Chemistry"}
+    ).json()
+
+    assert 0 < chemistry_response["total_laureates"] < all_response["total_laureates"]
+    assert 0 < chemistry_response["total_prizes"] < all_response["total_prizes"]
+    assert chemistry_response["total_countries"] <= all_response["total_countries"]
+    assert chemistry_response["women_laureates"] <= all_response["women_laureates"]
+
+
+def test_analytics_summary_year_filter_narrows_totals():
+    all_response = client.get("/analytics/summary").json()
+    narrowed_response = client.get(
+        "/analytics/summary", params={"start_year": 1990, "end_year": 2000}
+    ).json()
+
+    assert 0 < narrowed_response["total_laureates"] < all_response["total_laureates"]
+    assert 0 < narrowed_response["total_prizes"] < all_response["total_prizes"]
+
+
+def test_analytics_summary_combined_category_and_year_filter():
+    response = client.get(
+        "/analytics/summary",
+        params={"category": "Physics", "start_year": 1950, "end_year": 1959}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_prizes"] > 0
+    assert data["total_laureates"] > 0
+
+
+def test_analytics_summary_invalid_reversed_year_range_returns_400():
+    response = client.get(
+        "/analytics/summary",
+        params={"start_year": 2000, "end_year": 1990}
+    )
+    assert response.status_code == 400
+    assert "start_year" in response.json()["detail"]
+
+
+def test_analytics_summary_year_range_rejects_out_of_bounds_years():
+    response = client.get(
+        "/analytics/summary",
+        params={"start_year": 1800}
+    )
+    assert response.status_code == 422
+
+
+def test_analytics_summary_empty_filtered_result_for_nonexistent_category():
+    response = client.get(
+        "/analytics/summary",
+        params={"category": "CATEGORY-THAT-DOES-NOT-EXIST"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_laureates"] == 0
+    assert data["total_prizes"] == 0
+    assert data["total_countries"] == 0
+    assert data["women_laureates"] == 0
+    assert data["women_percentage"] == 0.0
+
     # Every decade a repeat laureate's awards land in must actually
     # contain at least one Physics laureate for that decade to prove
     # the observation didn't silently vanish from either bucket.
