@@ -44,7 +44,7 @@ function ContributionPicker({ topics, selectedId, onSelect }) {
           >
             <span className="quiz-contribution-option-copy">
               <strong>{topic.title}</strong>
-              <small>{topic.laureate_name}</small>
+              <small>{topic.credited_laureates?.map((credit) => credit.name).join(" & ") || topic.laureate_name}</small>
             </span>
             <span className={`learn-lesson-type learn-lesson-type--${topic.contribution_type.toLowerCase()}`}>
               {contributionTypeLabels[topic.contribution_type]}

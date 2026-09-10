@@ -73,7 +73,10 @@ function LessonCard({ topic, preferredLevel }) {
       ? `${topic.category} • Nobel Prize ${topic.prize_year}`
       : "Beyond the Nobel Prize";
 
-  const lessonHref = `/laureates/${topic.laureate_id}?contribution=${topic.contribution_id}&section=learn&level=${preferredLevel}`;
+  const credits = topic.credited_laureates ?? [];
+  const names = credits.length ? credits.map((credit) => credit.name).join(" & ") : topic.laureate_name;
+  const firstCredit = credits[0];
+  const lessonHref = `/laureates/${firstCredit?.laureate_id ?? topic.laureate_id}?contribution=${topic.contribution_id}&section=learn&level=${preferredLevel}`;
 
   return (
     <article className="learn-lesson-card">
@@ -88,9 +91,9 @@ function LessonCard({ topic, preferredLevel }) {
       </div>
 
       <div className="learn-lesson-byline">
-        <LessonAvatar imageUrl={topic.image_url} name={topic.laureate_name} />
+        <LessonAvatar imageUrl={firstCredit ? firstCredit.image_url : topic.image_url} name={firstCredit?.name ?? topic.laureate_name} />
         <span>
-          {topic.laureate_name}
+          {names}
           <small>{awardLine}</small>
         </span>
       </div>

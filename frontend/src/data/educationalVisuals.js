@@ -11,6 +11,13 @@ import relativityAdvancedImage from "../assets/education/relativity-advanced.png
 import relativityExpertImage from "../assets/education/relativity-expert.png";
 import relativityExploreImage from "../assets/education/relativity-explore.png";
 import relativitySimpleImage from "../assets/education/relativity-simple.png";
+import mrnaAdvancedImage from "../assets/education/mrna-advanced.png";
+import mrnaExpertImage from "../assets/education/mrna-expert.png";
+import mrnaExploreImage from "../assets/education/mrna-explore.png";
+import mrnaSimpleImage from "../assets/education/mrna-simple.png";
+import mrnaVaccinesApplicationImage from "../assets/education/mrna-vaccines-application.png";
+import mrnaFutureMedicinesApplicationImage from "../assets/education/mrna-future-medicines-application.png";
+import mrnaRnaSensingApplicationImage from "../assets/education/mrna-rna-sensing-application.png";
 import solarImage from "../assets/education/solar-panels.jpg";
 
 export const contributionVisuals = {
@@ -54,6 +61,36 @@ export const contributionVisuals = {
       Expert: ["metric gμν", "curvature Gμν", "stress-energy Tμν"],
     },
   },
+  "Nucleoside Base Modifications and mRNA Vaccines": {
+    thumbnail: {
+      label: "U → Ψ",
+      alt: "Uridine transforming into pseudouridine",
+    },
+    assetsByLevel: {
+      Simple: mrnaSimpleImage,
+      Explore: mrnaExploreImage,
+      Advanced: mrnaAdvancedImage,
+      Expert: mrnaExpertImage,
+    },
+    alt: "Diagram of nucleoside-modified mRNA reducing innate immune activation",
+    caption: null,
+    altByLevel: {
+      Simple:
+        "An mRNA message flowing into a cell to make a protein, with unmodified and modified versions compared",
+      Explore:
+        "DNA to mRNA to protein flow, comparing unmodified and modified mRNA immune responses, and uridine becoming pseudouridine",
+      Advanced:
+        "Synthetic mRNA delivered to a dendritic cell, comparing unmodified RNA triggering inflammatory signaling against modified nucleosides producing an antigen and adaptive immune response",
+      Expert:
+        "In-vitro-transcribed mRNA sensed by endosomal and cytosolic RNA receptors compared with nucleoside-modified mRNA, distinguishing pseudouridine from N1-methylpseudouridine and separating the Nobel-recognized discovery from later vaccine engineering",
+    },
+    levelCues: {
+      Simple: ["mRNA message", "cell reads it", "protein"],
+      Explore: ["uridine → pseudouridine", "innate immune reaction", "protein production"],
+      Advanced: ["dendritic cell", "Toll-like receptors", "adaptive immune response"],
+      Expert: ["TLR3/7/8", "RIG-I/MDA5", "Ψ vs m1Ψ"],
+    },
+  },
 };
 
 export const connectionVisuals = {
@@ -86,6 +123,21 @@ export const connectionVisuals = {
     kind: "waves",
     imageUrl: wavesImage,
     alt: "Two orbiting compact objects sending ripples through spacetime",
+  },
+  "mRNA Vaccines": {
+    kind: "mrna-vaccines",
+    imageUrl: mrnaVaccinesApplicationImage,
+    alt: "A COVID-19 mRNA vaccine vial, lipid nanoparticle, and cell producing spike protein that trains antibodies",
+  },
+  "Therapeutic mRNA / Future Medicines": {
+    kind: "mrna-future-medicines",
+    imageUrl: mrnaFutureMedicinesApplicationImage,
+    alt: "Therapeutic mRNA entering a cell to make a therapeutic protein, with cancer, antibody, and protein-replacement applications",
+  },
+  "Understanding Innate Immune Recognition of RNA": {
+    kind: "mrna-rna-sensing",
+    imageUrl: mrnaRnaSensingApplicationImage,
+    alt: "Foreign RNA recognized by innate immune sensors such as TLR7/8 and RIG-I, triggering immune signaling and response",
   },
 };
 

@@ -7,6 +7,13 @@ import EducationalEmptyState from "./EducationalEmptyState";
 import EducationalVisual from "./EducationalVisual";
 
 const levels = ["Simple", "Explore", "Advanced", "Expert"];
+
+// How many stored paragraphs are visible by default under the educational
+// image before the reader opts into "Read full explanation" -- the full text
+// stays in the data either way. Deliberately increasing (not identical) per
+// level so Simple stays very short while Expert can carry more by default,
+// per the approved level-progression requirement.
+const DEFAULT_VISIBLE_PARAGRAPHS = { Simple: 1, Explore: 2, Advanced: 2, Expert: 2 };
 const educationSections = [
   { id: "explore", label: "Explore" },
   { id: "learn", label: "Learn" },
@@ -15,11 +22,62 @@ const educationSections = [
   { id: "quiz", label: "Quiz" },
 ];
 
+// One coherent line-icon family (shared viewBox/stroke settings) for the
+// four learning levels -- no icon library is installed, so these are
+// hand-drawn inline SVGs rather than a new dependency.
+const LEVEL_ICON_PROPS = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": "true",
+};
+
+function LightbulbIcon() {
+  return (
+    <svg {...LEVEL_ICON_PROPS}>
+      <path d="M9 18h6" />
+      <path d="M10 21.5h4" />
+      <path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.7.5 1.3 1.5 1.3 2.7h5c0-1.2.6-2.2 1.3-2.7A6.5 6.5 0 0 0 12 2.5Z" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg {...LEVEL_ICON_PROPS}>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16.2" y2="16.2" />
+    </svg>
+  );
+}
+
+function FlaskIcon() {
+  return (
+    <svg {...LEVEL_ICON_PROPS}>
+      <path d="M9.5 2h5" />
+      <path d="M10.5 2v6.8l-5.3 9.2a1.9 1.9 0 0 0 1.65 2.85h10.3a1.9 1.9 0 0 0 1.65-2.85l-5.3-9.2V2" />
+      <path d="M8.3 15h7.4" />
+    </svg>
+  );
+}
+
+function BookOpenIcon() {
+  return (
+    <svg {...LEVEL_ICON_PROPS}>
+      <path d="M12 6.2c-1.6-1.1-3.7-1.7-6.3-1.7v13.2c2.6 0 4.7.6 6.3 1.7c1.6-1.1 3.7-1.7 6.3-1.7V4.5c-2.6 0-4.7.6-6.3 1.7Z" />
+      <path d="M12 6.2v13.2" />
+    </svg>
+  );
+}
+
 const levelDetails = {
-  Simple: { audience: "Grades 4–6", style: "Everyday language, minimal math", icon: "👧" },
-  Explore: { audience: "Grades 7–9", style: "Build vocabulary and understanding", icon: "👦" },
-  Advanced: { audience: "Grades 10–12", style: "Equations and deeper reasoning", icon: "👩" },
-  Expert: { audience: "College+", style: "Technical detail and full context", icon: "🎓" },
+  Simple: { audience: "Grades 4–6", style: "Everyday language, minimal math", Icon: LightbulbIcon },
+  Explore: { audience: "Grades 7–9", style: "Build vocabulary and understanding", Icon: SearchIcon },
+  Advanced: { audience: "Grades 10–12", style: "Equations and deeper reasoning", Icon: FlaskIcon },
+  Expert: { audience: "College+", style: "Technical detail and full context", Icon: BookOpenIcon },
 };
 
 const contributionLabels = {
@@ -31,6 +89,18 @@ const connectionLabels = {
   APPLICATION: { icon: "◆", label: "Real-World Application" },
   EXPERIMENTAL_VALIDATION: { icon: "◎", label: "Experimental Validation" },
   SCIENTIFIC_LEGACY: { icon: "↗", label: "Scientific Legacy" },
+};
+
+// Frontend-only display override, keyed by connection_id: connection 278
+// ("Understanding Innate Immune Recognition of RNA", contribution 609) is
+// stored as SCIENTIFIC_LEGACY, but reads more accurately to students as a
+// foundational mechanism than a downstream legacy effect. This changes only
+// the label shown here -- connection_type in the database, the badge's
+// accent styling, the title, description, image, source, and ID are all
+// unchanged. Einstein's SCIENTIFIC_LEGACY connections (e.g. Gravitational
+// Waves) are untouched and keep showing "Scientific Legacy".
+const CONNECTION_LABEL_OVERRIDES = {
+  278: "Scientific Foundation",
 };
 
 function parseKeyConcepts(keyConcepts) {
@@ -125,6 +195,17 @@ function ContributionSelector({ contributions, laureateName, selectedId, onSelec
 }
 
 function LearningSection({ contribution, explanations, level, onLevelChange }) {
+  const [isExplanationExpanded, setIsExplanationExpanded] = useState(false);
+
+  const explanation = explanations.find((item) => item.level === level) || explanations[0];
+
+  // Collapse back to the concise view whenever the level changes, so
+  // switching levels never leaves a previous level's "expanded" choice
+  // showing under the new image.
+  useEffect(() => {
+    setIsExplanationExpanded(false);
+  }, [explanation?.level]);
+
   if (!explanations.length) {
     return (
       <EducationalEmptyState title="Explanations coming soon">
@@ -133,19 +214,25 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
     );
   }
 
-  const explanation = explanations.find((item) => item.level === level) || explanations[0];
-  const levelDetail = levelDetails[explanation.level];
   const visual = getContributionVisual(contribution.title);
+  const paragraphs = parseExplanationParagraphs(explanation.explanation_text);
+  const visibleCount = DEFAULT_VISIBLE_PARAGRAPHS[explanation.level] ?? paragraphs.length;
+  const canExpand = paragraphs.length > visibleCount;
+  const visibleParagraphs = isExplanationExpanded ? paragraphs : paragraphs.slice(0, visibleCount);
 
   return (
     <section className="learning-panel" id="learn" aria-labelledby="learn-title">
       <div className="detail-section-heading">
         <p className="eyebrow">Learn at your level</p>
         <h2 id="learn-title">Understand the idea</h2>
+        {contribution.credited_laureates?.length > 1 && (
+          <p>{contribution.credited_laureates.map((credit) => credit.name).join(" & ")}</p>
+        )}
       </div>
       <div className="learning-tabs" role="tablist" aria-label="Explanation level">
         {levels.map((item) => {
           const available = explanations.some((explanationItem) => explanationItem.level === item);
+          const TabIcon = levelDetails[item].Icon;
           return (
             <button
               className={item === explanation.level ? "learning-tab learning-tab--active" : "learning-tab"}
@@ -156,7 +243,7 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
               onClick={() => onLevelChange(item)}
               key={item}
             >
-              <span className="level-icon" aria-hidden="true">{levelDetails[item].icon}</span>
+              <span className={`level-icon level-icon--${item.toLowerCase()}`}><TabIcon /></span>
               <strong>{item}</strong>
               <span>{levelDetails[item].audience}</span>
               <small>{levelDetails[item].style}</small>
@@ -164,16 +251,25 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
           );
         })}
       </div>
-      <div className={`selected-level-heading selected-level-heading--${explanation.level.toLowerCase()}`}>
-        <span className="level-icon" aria-hidden="true">{levelDetail.icon}</span>
-        <div><strong>{explanation.level} — {levelDetail.audience}</strong><span>{levelDetail.style}</span></div>
-      </div>
       <div className={`learning-layout learning-layout--${explanation.level.toLowerCase()}`} role="tabpanel">
+        <div className={`visual-learning visual-learning--${explanation.level.toLowerCase()}`}>
+          <EducationalVisual visual={visual} level={explanation.level} />
+        </div>
         <div className="learning-copy">
           <h3>How it works</h3>
-          {parseExplanationParagraphs(explanation.explanation_text).map((paragraph) => (
+          {visibleParagraphs.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
+          {canExpand && (
+            <button
+              type="button"
+              className="learning-copy-toggle"
+              onClick={() => setIsExplanationExpanded((expanded) => !expanded)}
+              aria-expanded={isExplanationExpanded}
+            >
+              {isExplanationExpanded ? "Show less" : "Read full explanation"}
+            </button>
+          )}
         </div>
         {explanation.key_concepts && (
           <div className="key-concepts">
@@ -185,46 +281,94 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
             </ul>
           </div>
         )}
-        <div className={`visual-learning visual-learning--${explanation.level.toLowerCase()}`}>
-          <EducationalVisual visual={visual} level={explanation.level} />
-        </div>
       </div>
     </section>
   );
 }
 
 function ConnectionsSection({ connections }) {
+  const [selectedConnectionId, setSelectedConnectionId] = useState(
+    connections[0]?.connection_id ?? null,
+  );
+
+  // Re-select the first application whenever the underlying contribution's
+  // connections change, so switching contributions never leaves a stale
+  // selection from a previous one.
+  useEffect(() => {
+    setSelectedConnectionId(connections[0]?.connection_id ?? null);
+  }, [connections]);
+
+  const selectedConnection =
+    connections.find((connection) => connection.connection_id === selectedConnectionId) ??
+    connections[0];
+
+  function handleTabKeyDown(event, currentIndex) {
+    let nextIndex = null;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % connections.length;
+    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + connections.length) % connections.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = connections.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    setSelectedConnectionId(connections[nextIndex].connection_id);
+    event.currentTarget.parentElement.children[nextIndex].focus();
+  }
+
   return (
     <section className="connections-section" id="connections" aria-labelledby="connections-title">
       <div className="detail-section-heading">
-        <p className="eyebrow">Connect the idea</p>
-        <h2 id="connections-title">Applications, evidence, and legacy</h2>
+        <p className="eyebrow">Real-world impact</p>
+        <h2 id="connections-title">See how the discovery matters</h2>
       </div>
-      {connections.length ? (
-        <div className="connection-grid">
-          {connections.map((connection) => (
-            <article className="connection-card" key={connection.connection_id}>
-              <EducationalVisual visual={getConnectionVisual(connection.title)} compact />
-              <span className={`connection-type connection-type--${connection.connection_type.toLowerCase()}`}>
-                <span aria-hidden="true">{connectionLabels[connection.connection_type].icon}</span>
-                {connectionLabels[connection.connection_type].label}
-              </span>
-              <h3>{connection.title}</h3>
-              {connection.description && <p>{connection.description}</p>}
-              <div className="connection-actions">
-                {connection.source_url && (
-                  <a href={connection.source_url} target="_blank" rel="noreferrer">
-                    Source <span aria-hidden="true">↗</span>
-                  </a>
-                )}
-                {connection.related_prize && (
-                  <Link to={`/prizes/${connection.related_prize.prize_id}`}>
-                    Explore the {connection.related_prize.year} {connection.related_prize.category} Prize →
-                  </Link>
-                )}
-              </div>
-            </article>
-          ))}
+      {connections.length && selectedConnection ? (
+        <div className="connection-experience">
+          <div className="connection-tabs" role="tablist" aria-label="Applications and connections">
+            {connections.map((connection, index) => (
+              <button
+                className={`connection-tab${connection.connection_id === selectedConnection.connection_id ? " connection-tab--active" : ""}`}
+                type="button"
+                role="tab"
+                id={`connection-tab-${connection.connection_id}`}
+                aria-controls={`connection-panel-${connection.connection_id}`}
+                aria-selected={connection.connection_id === selectedConnection.connection_id}
+                tabIndex={connection.connection_id === selectedConnection.connection_id ? 0 : -1}
+                onClick={() => setSelectedConnectionId(connection.connection_id)}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
+                key={connection.connection_id}
+              >
+                {connection.title}
+              </button>
+            ))}
+          </div>
+          <article
+            className="connection-featured"
+            id={`connection-panel-${selectedConnection.connection_id}`}
+            role="tabpanel"
+            aria-labelledby={`connection-tab-${selectedConnection.connection_id}`}
+          >
+            <div className="connection-featured-visual">
+              <EducationalVisual visual={getConnectionVisual(selectedConnection.title)} />
+            </div>
+            <span className={`connection-type connection-type--${selectedConnection.connection_type.toLowerCase()}`}>
+              <span aria-hidden="true">{connectionLabels[selectedConnection.connection_type].icon}</span>
+              {CONNECTION_LABEL_OVERRIDES[selectedConnection.connection_id] ?? connectionLabels[selectedConnection.connection_type].label}
+            </span>
+            <h3>{selectedConnection.title}</h3>
+            {selectedConnection.description && <p>{selectedConnection.description}</p>}
+            <div className="connection-actions">
+              {selectedConnection.source_url && (
+                <a href={selectedConnection.source_url} target="_blank" rel="noreferrer">
+                  Source <span aria-hidden="true">↗</span>
+                </a>
+              )}
+              {selectedConnection.related_prize && (
+                <Link to={`/prizes/${selectedConnection.related_prize.prize_id}`}>
+                  Explore the {selectedConnection.related_prize.year} {selectedConnection.related_prize.category} Prize →
+                </Link>
+              )}
+            </div>
+          </article>
         </div>
       ) : (
         <EducationalEmptyState title="Connections coming soon">
