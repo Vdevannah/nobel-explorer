@@ -1,3 +1,4 @@
+from backend.models.contribution_laureate import ContributionLaureate
 from sqlalchemy.exc import IntegrityError
 
 from backend.database.connection import SessionLocal
@@ -49,8 +50,8 @@ def test_explanation_repository():
         )
 
         contribution = Contribution(
-            laureate=laureate,
-            laureate_prize=laureate_prize,
+            credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
             contribution_type="NOBEL_LINKED",
             title="Test Contribution",
             summary="Temporary contribution",
@@ -191,4 +192,4 @@ def test_explanation_repository():
 
 if __name__ == "__main__":
     test_explanation_repository()
-    
+

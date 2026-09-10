@@ -8,6 +8,7 @@ from backend.models.prize import Prize
 from backend.schemas.connection import ConnectionCreate
 from backend.schemas.contribution import ContributionCreate
 from backend.schemas.explanation import ExplanationCreate
+from backend.repositories import contribution_repository
 from backend.services import (
     connection_service,
     contribution_service,
@@ -51,8 +52,7 @@ def contribution_data(
     title: str,
 ) -> ContributionCreate:
     return ContributionCreate(
-        laureate_id=laureate_id,
-        laureate_prize_id=laureate_prize_id,
+        credited_laureates=[{"laureate_id": laureate_id, "laureate_prize_id": laureate_prize_id}],
         contribution_type=contribution_type,
         title=title,
         summary="Test summary",
@@ -114,6 +114,93 @@ def test_contribution_relationship_validation(educational_db):
                 "BEYOND_NOBEL",
                 laureate_prize.laureate_prize_id,
                 "Invalid beyond-Nobel award",
+            ),
+        )
+
+
+def test_shared_contribution_with_multiple_laureates(educational_db):
+    # Mirrors the Karikó/Weissman shared-Nobel-Prize architecture case with
+    # synthetic laureates (no real Karikó/Weissman educational content is
+    # created here, per the "do not seed yet" instruction) -- two laureates
+    # explicitly credited on one contribution, each with their own award link.
+    db, laureate, other_laureate, laureate_prize, related_prize = educational_db
+    other_prize = LaureatePrize(laureate=other_laureate, prize=related_prize)
+    db.add(other_prize)
+    db.flush()
+
+    shared = contribution_service.create_contribution(
+        db,
+        ContributionCreate(
+            credited_laureates=[
+                {"laureate_id": laureate.laureate_id, "laureate_prize_id": laureate_prize.laureate_prize_id},
+                {"laureate_id": other_laureate.laureate_id, "laureate_prize_id": other_prize.laureate_prize_id},
+            ],
+            contribution_type="NOBEL_LINKED",
+            title="Shared discovery",
+            summary="Two laureates explicitly credited for one discovery.",
+        ),
+    )
+
+    # Shared contribution with two laureates, each keeping their own award.
+    credits = {credit.laureate_id: credit for credit in shared.credited_laureates}
+    assert set(credits) == {laureate.laureate_id, other_laureate.laureate_id}
+    assert credits[laureate.laureate_id].laureate_prize_id == laureate_prize.laureate_prize_id
+    assert credits[other_laureate.laureate_id].laureate_prize_id == other_prize.laureate_prize_id
+
+    # Discoverable from both laureates.
+    from_first = contribution_repository.get_by_laureate(db, laureate.laureate_id)
+    from_second = contribution_repository.get_by_laureate(db, other_laureate.laureate_id)
+    assert shared.contribution_id in [item.contribution_id for item in from_first]
+    assert shared.contribution_id in [item.contribution_id for item in from_second]
+
+    # Catalog returns it exactly once, exposing both credited laureates.
+    catalog = contribution_service.list_catalog(db)
+    matches = [item for item in catalog if item.contribution_id == shared.contribution_id]
+    assert len(matches) == 1
+    assert {credit.laureate_id for credit in matches[0].credited_laureates} == {
+        laureate.laureate_id, other_laureate.laureate_id,
+    }
+
+    # Each award must belong to its own credited laureate -- swapping them is rejected.
+    with pytest.raises(ServiceValidationError):
+        contribution_service.create_contribution(
+            db,
+            ContributionCreate(
+                credited_laureates=[
+                    {"laureate_id": laureate.laureate_id, "laureate_prize_id": other_prize.laureate_prize_id},
+                    {"laureate_id": other_laureate.laureate_id, "laureate_prize_id": laureate_prize.laureate_prize_id},
+                ],
+                contribution_type="NOBEL_LINKED",
+                title="Swapped awards",
+            ),
+        )
+
+    # Association is explicit only -- an uninvolved laureate is never auto-credited.
+    third_party = Laureate(
+        nobel_laureate_id="TEST-EDU-003",
+        full_name="Uncredited Laureate",
+        laureate_type="Person",
+        featured=False,
+    )
+    db.add(third_party)
+    db.flush()
+    assert third_party.laureate_id not in credits
+    assert shared.contribution_id not in [
+        item.contribution_id
+        for item in contribution_repository.get_by_laureate(db, third_party.laureate_id)
+    ]
+
+    # (contribution_id, laureate_id) uniqueness is an explicit business rule.
+    with pytest.raises(ServiceValidationError):
+        contribution_service.create_contribution(
+            db,
+            ContributionCreate(
+                credited_laureates=[
+                    {"laureate_id": laureate.laureate_id},
+                    {"laureate_id": laureate.laureate_id},
+                ],
+                contribution_type="BEYOND_NOBEL",
+                title="Duplicate credit",
             ),
         )
 

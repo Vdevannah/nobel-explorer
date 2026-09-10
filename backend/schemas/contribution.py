@@ -10,8 +10,6 @@ ContributionType = Literal["NOBEL_LINKED", "BEYOND_NOBEL"]
 
 
 class ContributionBase(BaseModel):
-    laureate_id: int
-    laureate_prize_id: int | None = None
     contribution_type: ContributionType
     title: str
     summary: str | None = None
@@ -19,11 +17,23 @@ class ContributionBase(BaseModel):
     source_url: str | None = None
 
 
+class ContributionAttribution(BaseModel):
+    laureate_id: int
+    laureate_prize_id: int | None = None
+
+
+class CreditedLaureate(ContributionAttribution):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    image_url: str | None
+
+
 class ContributionCreate(ContributionBase):
-    pass
+    credited_laureates: list[ContributionAttribution] = Field(min_length=1)
 
 
-class ContributionUpdate(ContributionBase):
+class ContributionUpdate(ContributionCreate):
     pass
 
 
@@ -31,6 +41,10 @@ class ContributionResponse(ContributionBase):
     model_config = ConfigDict(from_attributes=True)
 
     contribution_id: int
+    credited_laureates: list[CreditedLaureate]
+    # Legacy projections: first credit by laureate_id, not ownership.
+    laureate_id: int
+    laureate_prize_id: int | None
 
 
 class ContributionDetailResponse(ContributionResponse):
@@ -46,6 +60,7 @@ class ContributionCatalogItem(BaseModel):
     summary: str | None
     contribution_type: ContributionType
     laureate_id: int
+    credited_laureates: list[CreditedLaureate]
     laureate_name: str
     image_url: str | None
     category: str | None

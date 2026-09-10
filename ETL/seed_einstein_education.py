@@ -719,7 +719,7 @@ def _require_existing_nobel_data(db: Session):
 
 def _upsert_contribution(db: Session, data: ContributionCreate):
     contribution = contribution_repository.get_by_laureate_type_and_title(
-        db, data.laureate_id, data.contribution_type, data.title
+        db, data.credited_laureates[0].laureate_id, data.contribution_type, data.title
     )
     if contribution is None:
         return contribution_service.create_contribution(db, data)
@@ -807,8 +807,10 @@ def seed_einstein_education(db: Session) -> dict:
     photoelectric = _upsert_contribution(
         db,
         ContributionCreate(
-            laureate_id=einstein.laureate_id,
-            laureate_prize_id=einstein_prize.laureate_prize_id,
+            credited_laureates=[{
+                "laureate_id": einstein.laureate_id,
+                "laureate_prize_id": einstein_prize.laureate_prize_id,
+            }],
             contribution_type="NOBEL_LINKED",
             title="Photoelectric Effect",
             summary=(
@@ -826,8 +828,7 @@ def seed_einstein_education(db: Session) -> dict:
     relativity = _upsert_contribution(
         db,
         ContributionCreate(
-            laureate_id=einstein.laureate_id,
-            laureate_prize_id=None,
+            credited_laureates=[{"laureate_id": einstein.laureate_id}],
             contribution_type="BEYOND_NOBEL",
             title="General Relativity",
             summary=(

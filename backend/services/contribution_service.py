@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from backend.models.contribution import Contribution
+from backend.models.contribution_laureate import ContributionLaureate
 from backend.repositories import (
     contribution_repository,
     laureate_prize_repository,
@@ -8,6 +9,8 @@ from backend.repositories import (
 )
 from backend.schemas.contribution import (
     ContributionCatalogItem,
+    ContributionAttribution,
+    CreditedLaureate,
     ContributionCreate,
     ContributionDetailResponse,
     ContributionResponse,
@@ -23,31 +26,36 @@ LEVEL_ORDER = ["Simple", "Explore", "Advanced", "Expert"]
 
 def _validate_relationships(
     db: Session,
-    laureate_id: int,
     contribution_type: str,
-    laureate_prize_id: int | None,
+    credited_laureates: list[ContributionAttribution],
 ) -> None:
-    if laureate_repository.get_by_id(db, laureate_id) is None:
-        raise ResourceNotFoundError("Laureate", laureate_id)
+    if not credited_laureates:
+        raise ServiceValidationError("A contribution requires at least one credited laureate")
+    ids = [credit.laureate_id for credit in credited_laureates]
+    if len(ids) != len(set(ids)):
+        raise ServiceValidationError("A laureate can only be credited once per contribution")
+    for credit in credited_laureates:
+        if laureate_repository.get_by_id(db, credit.laureate_id) is None:
+            raise ResourceNotFoundError("Laureate", credit.laureate_id)
+        if credit.laureate_prize_id is not None:
+            award = laureate_prize_repository.get_by_id(db, credit.laureate_prize_id)
+            if award is None:
+                raise ResourceNotFoundError("LaureatePrize", credit.laureate_prize_id)
+            if award.laureate_id != credit.laureate_id:
+                raise ServiceValidationError("LaureatePrize does not belong to the credited laureate")
+            if contribution_type == "BEYOND_NOBEL":
+                raise ServiceValidationError("BEYOND_NOBEL contributions cannot reference a LaureatePrize")
+    if contribution_type == "NOBEL_LINKED" and not any(
+        credit.laureate_prize_id is not None for credit in credited_laureates
+    ):
+        raise ServiceValidationError("NOBEL_LINKED contributions require at least one award link")
 
-    if contribution_type == "NOBEL_LINKED":
-        if laureate_prize_id is None:
-            raise ServiceValidationError(
-                "NOBEL_LINKED contributions require laureate_prize_id"
-            )
-        laureate_prize = laureate_prize_repository.get_by_id(
-            db, laureate_prize_id
-        )
-        if laureate_prize is None:
-            raise ResourceNotFoundError("LaureatePrize", laureate_prize_id)
-        if laureate_prize.laureate_id != laureate_id:
-            raise ServiceValidationError(
-                "LaureatePrize does not belong to the contribution laureate"
-            )
-    elif laureate_prize_id is not None:
-        raise ServiceValidationError(
-            "BEYOND_NOBEL contributions cannot reference a LaureatePrize"
-        )
+
+def _credits(contribution: Contribution) -> list[CreditedLaureate]:
+    return [
+        CreditedLaureate.model_validate(credit)
+        for credit in sorted(contribution.credited_laureates, key=lambda credit: credit.laureate_id)
+    ]
 
 
 def list_laureate_contributions(
@@ -71,6 +79,7 @@ def get_contribution(
         raise ResourceNotFoundError("Contribution", contribution_id)
     return ContributionDetailResponse(
         contribution_id=contribution.contribution_id,
+        credited_laureates=_credits(contribution),
         laureate_id=contribution.laureate_id,
         laureate_prize_id=contribution.laureate_prize_id,
         contribution_type=contribution.contribution_type,
@@ -93,14 +102,12 @@ def list_catalog(db: Session) -> list[ContributionCatalogItem]:
     contributions = contribution_repository.list_catalog(db)
     catalog: list[ContributionCatalogItem] = []
     for contribution in contributions:
-        prize = (
-            contribution.laureate_prize.prize
-            if contribution.laureate_prize is not None
-            else None
-        )
-        category_name = (
-            prize.category.name if prize is not None and prize.category is not None else None
-        )
+        credits = _credits(contribution)
+        awards = [credit.laureate_prize.prize for credit in contribution.credited_laureates
+                  if credit.laureate_prize is not None]
+        # Keep the legacy award summary only when it is unambiguous.
+        prize = awards[0] if awards and len({award.prize_id for award in awards}) == 1 else None
+        category_name = prize.category.name if prize is not None else None
         prize_year = prize.year if prize is not None else None
         available_levels = sorted(
             {explanation.level for explanation in contribution.explanations},
@@ -113,8 +120,9 @@ def list_catalog(db: Session) -> list[ContributionCatalogItem]:
                 summary=contribution.summary,
                 contribution_type=contribution.contribution_type,
                 laureate_id=contribution.laureate_id,
-                laureate_name=contribution.laureate.full_name,
-                image_url=contribution.laureate.image_url,
+                credited_laureates=credits,
+                laureate_name=credits[0].name,
+                image_url=credits[0].image_url,
                 category=category_name,
                 prize_year=prize_year,
                 available_levels=available_levels,
@@ -127,11 +135,13 @@ def list_catalog(db: Session) -> list[ContributionCatalogItem]:
 def create_contribution(db: Session, data: ContributionCreate) -> Contribution:
     _validate_relationships(
         db,
-        data.laureate_id,
         data.contribution_type,
-        data.laureate_prize_id,
+        data.credited_laureates,
     )
-    return contribution_repository.create(db, Contribution(**data.model_dump()))
+    return contribution_repository.create(db, Contribution(
+        **data.model_dump(exclude={"credited_laureates"}),
+        credited_laureates=[ContributionLaureate(**credit.model_dump()) for credit in data.credited_laureates],
+    ))
 
 
 def update_contribution(
@@ -144,15 +154,13 @@ def update_contribution(
         raise ResourceNotFoundError("Contribution", contribution_id)
     _validate_relationships(
         db,
-        data.laureate_id,
         data.contribution_type,
-        data.laureate_prize_id,
+        data.credited_laureates,
     )
     return contribution_repository.update(
         db,
         contribution,
-        laureate_id=data.laureate_id,
-        laureate_prize_id=data.laureate_prize_id,
+        credited_laureates=[ContributionLaureate(**credit.model_dump()) for credit in data.credited_laureates],
         contribution_type=data.contribution_type,
         title=data.title,
         summary=data.summary,

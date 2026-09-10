@@ -1,3 +1,4 @@
+from backend.models.contribution_laureate import ContributionLaureate
 from fastapi.testclient import TestClient
 
 from backend.database.connection import SessionLocal, get_db
@@ -26,8 +27,8 @@ def test_educational_read_endpoints_and_quiz_safety():
         )
         laureate_prize = LaureatePrize(laureate=laureate, prize=prize)
         contribution = Contribution(
-            laureate=laureate,
-            laureate_prize=laureate_prize,
+            credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
             contribution_type="NOBEL_LINKED",
             title="Photoelectric Test",
         )
@@ -139,8 +140,8 @@ def test_quiz_answer_check_endpoint():
         )
         laureate_prize = LaureatePrize(laureate=laureate, prize=prize)
         contribution = Contribution(
-            laureate=laureate,
-            laureate_prize=laureate_prize,
+            credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
             contribution_type="NOBEL_LINKED",
             title="Quiz Check Contribution",
         )
@@ -231,14 +232,14 @@ def test_contributions_catalog_reflects_real_content():
         laureate_prize = LaureatePrize(laureate=laureate, prize=prize)
 
         nobel_linked = Contribution(
-            laureate=laureate,
-            laureate_prize=laureate_prize,
+            credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
             contribution_type="NOBEL_LINKED",
             title="Catalog Nobel-Linked Contribution",
             summary="A nobel-linked summary.",
         )
         beyond_nobel = Contribution(
-            laureate=laureate,
+            credited_laureates=[ContributionLaureate(laureate=laureate)],
             contribution_type="BEYOND_NOBEL",
             title="Catalog Beyond-Nobel Contribution",
             summary="A beyond-nobel summary.",
@@ -335,3 +336,45 @@ def test_contributions_catalog_reflects_real_content():
         app.dependency_overrides.clear()
         db.rollback()
         db.close()
+
+
+def test_einstein_contributions_unaffected_by_shared_attribution_migration():
+    # Real seeded data (not a synthetic fixture): confirms the contribution
+    # 38/39 IDs, laureate 249 attribution, and every deep-link-dependent API
+    # call behave exactly as before the ContributionLaureate migration.
+    client = TestClient(app)
+
+    laureate_contributions = client.get("/laureates/249/contributions").json()
+    assert {item["contribution_id"] for item in laureate_contributions} == {38, 39}
+
+    photoelectric = client.get("/contributions/38").json()
+    assert photoelectric["title"] == "Photoelectric Effect"
+    assert photoelectric["contribution_type"] == "NOBEL_LINKED"
+    assert photoelectric["laureate_id"] == 249
+    assert len(photoelectric["credited_laureates"]) == 1
+    assert photoelectric["credited_laureates"][0]["laureate_id"] == 249
+    assert photoelectric["credited_laureates"][0]["laureate_prize_id"] is not None
+
+    relativity = client.get("/contributions/39").json()
+    assert relativity["title"] == "General Relativity"
+    assert relativity["contribution_type"] == "BEYOND_NOBEL"
+    assert relativity["laureate_id"] == 249
+    assert relativity["laureate_prize_id"] is None
+    assert relativity["credited_laureates"] == [
+        {**relativity["credited_laureates"][0], "laureate_prize_id": None}
+    ]
+
+    # The exact API calls the /laureates/249?contribution=38&section=learn&level=Simple
+    # and /quiz?contribution=38&level=Simple deep links depend on.
+    simple_explanation = client.get("/contributions/38/explanations/Simple")
+    assert simple_explanation.status_code == 200
+    assert simple_explanation.json()["level"] == "Simple"
+
+    quiz_questions = client.get("/contributions/38/quiz").json()
+    assert isinstance(quiz_questions, list)
+    assert len(quiz_questions) > 0
+
+    catalog = client.get("/contributions").json()
+    catalog_ids = [item["contribution_id"] for item in catalog]
+    assert catalog_ids.count(38) == 1
+    assert catalog_ids.count(39) == 1

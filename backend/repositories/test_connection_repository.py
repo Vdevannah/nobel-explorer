@@ -1,3 +1,4 @@
+from backend.models.contribution_laureate import ContributionLaureate
 from backend.database.connection import SessionLocal
 from backend.models.category import Category
 from backend.models.connection import Connection
@@ -28,8 +29,8 @@ def test_connection_repository():
         )
         laureate_prize = LaureatePrize(laureate=laureate, prize=prize)
         contribution = Contribution(
-            laureate=laureate,
-            laureate_prize=laureate_prize,
+            credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
             contribution_type="NOBEL_LINKED",
             title="Test Contribution",
         )

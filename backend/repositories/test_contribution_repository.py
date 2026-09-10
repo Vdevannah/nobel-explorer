@@ -1,3 +1,4 @@
+from backend.models.contribution_laureate import ContributionLaureate
 from backend.database.connection import SessionLocal
 from backend.models.category import Category
 from backend.models.contribution import Contribution
@@ -36,8 +37,8 @@ def test_contribution_repository():
         nobel_contribution = create(
             db,
             Contribution(
-                laureate=laureate,
-                laureate_prize=laureate_prize,
+                credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
                 contribution_type="NOBEL_LINKED",
                 title="Original Contribution",
                 summary="Original summary",
@@ -48,7 +49,7 @@ def test_contribution_repository():
         beyond_nobel = create(
             db,
             Contribution(
-                laureate=laureate,
+                credited_laureates=[ContributionLaureate(laureate=laureate)],
                 contribution_type="BEYOND_NOBEL",
                 title="Beyond Nobel Contribution",
             ),
@@ -71,8 +72,10 @@ def test_contribution_repository():
         updated = update(
             db,
             nobel_contribution,
-            laureate_id=laureate.laureate_id,
-            laureate_prize_id=laureate_prize.laureate_prize_id,
+            credited_laureates=[ContributionLaureate(
+                laureate_id=laureate.laureate_id,
+                laureate_prize_id=laureate_prize.laureate_prize_id,
+            )],
             contribution_type="NOBEL_LINKED",
             title="Updated Contribution",
             summary="Updated summary",

@@ -1,3 +1,4 @@
+from backend.models.contribution_laureate import ContributionLaureate
 from backend.database.connection import SessionLocal
 from backend.models import (
     Category,
@@ -41,8 +42,8 @@ def test_relationships():
         )
 
         contribution = Contribution(
-            laureate=laureate,
-            laureate_prize=laureate_prize,
+            credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
             contribution_type="NOBEL_LINKED",
             title="Test Contribution",
             summary="Temporary contribution used for ORM testing",
@@ -79,7 +80,7 @@ def test_relationships():
         print("Prize:", category.prizes[0].year)
         print("Prize category:", prize.category.name)
         print("Laureate:", prize.laureate_prizes[0].laureate.full_name)
-        print("Contribution:", laureate_prize.contributions[0].title)
+        print("Contribution:", laureate_prize.contribution_attributions[0].contribution.title)
         print("Connection:", contribution.connections[0].title)
         print("Explanation:", contribution.explanations[0].explanation_text)
         print("Quiz:", contribution.quiz_questions[0].question)

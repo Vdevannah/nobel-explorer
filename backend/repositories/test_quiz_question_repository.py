@@ -1,3 +1,4 @@
+from backend.models.contribution_laureate import ContributionLaureate
 from backend.database.connection import SessionLocal
 
 from backend.models.category import Category
@@ -46,8 +47,8 @@ def test_quiz_question_repository():
         )
 
         contribution = Contribution(
-            laureate=laureate,
-            laureate_prize=laureate_prize,
+            credited_laureates=[ContributionLaureate(laureate=laureate, laureate_prize=laureate_prize)],
+
             contribution_type="NOBEL_LINKED",
             title="Test Quiz Contribution",
             summary="Temporary contribution",
@@ -191,4 +192,4 @@ def test_quiz_question_repository():
 
 if __name__ == "__main__":
     test_quiz_question_repository()
-    
+
