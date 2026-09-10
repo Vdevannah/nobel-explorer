@@ -336,6 +336,10 @@ RELATIVITY_CONNECTIONS = [
 ]
 
 
+# Answer-choice positions below are deliberately varied (not always "A") to
+# avoid a guessable pattern, while the underlying scientifically correct
+# answer text is unchanged. Distribution across these 12 questions: A x3,
+# B x3, C x3, D x3.
 PHOTOELECTRIC_QUIZ = [
     {
         "level": "Simple",
@@ -356,11 +360,11 @@ PHOTOELECTRIC_QUIZ = [
             "Above the threshold frequency, what mainly raises the maximum energy "
             "of emitted electrons?"
         ),
-        "choice_a": "Increasing the light frequency",
-        "choice_b": "Increasing the light intensity only",
+        "choice_a": "Increasing the light intensity only",
+        "choice_b": "Increasing the light frequency",
         "choice_c": "Making the sample larger",
         "choice_d": "Waiting longer before illumination",
-        "correct_answer": "A",
+        "correct_answer": "B",
         "answer_explanation": (
             "Photon energy increases with frequency; intensity mainly changes how "
             "many photons arrive."
@@ -369,11 +373,11 @@ PHOTOELECTRIC_QUIZ = [
     {
         "level": "Advanced",
         "question": "Which equation gives the maximum photoelectron kinetic energy?",
-        "choice_a": "Kmax = hν - φ",
-        "choice_b": "Kmax = hν + φ",
-        "choice_c": "Kmax = φ - hν for every frequency",
+        "choice_a": "Kmax = hν + φ",
+        "choice_b": "Kmax = φ - hν for every frequency",
+        "choice_c": "Kmax = hν - φ",
         "choice_d": "Kmax = intensity multiplied by time",
-        "correct_answer": "A",
+        "correct_answer": "C",
         "answer_explanation": (
             "The photon supplies energy hν, and the work function φ is required to "
             "release the electron."
@@ -382,11 +386,11 @@ PHOTOELECTRIC_QUIZ = [
     {
         "level": "Expert",
         "question": "What does the stopping potential determine in a photoelectric experiment?",
-        "choice_a": "Maximum photoelectron kinetic energy through eVs = Kmax",
-        "choice_b": "The number of atoms in the sample",
-        "choice_c": "The speed of light in vacuum",
-        "choice_d": "The photon's electric charge",
-        "correct_answer": "A",
+        "choice_a": "The number of atoms in the sample",
+        "choice_b": "The speed of light in vacuum",
+        "choice_c": "The photon's electric charge",
+        "choice_d": "Maximum photoelectron kinetic energy through eVs = Kmax",
+        "correct_answer": "D",
         "answer_explanation": (
             "The retarding stopping potential suppresses the fastest photoelectrons, "
             "so eV_s equals their maximum kinetic energy."
@@ -407,11 +411,11 @@ PHOTOELECTRIC_QUIZ = [
     {
         "level": "Simple",
         "question": "In the photoelectric effect, what does light knock out of a metal?",
-        "choice_a": "An electron",
-        "choice_b": "A proton",
+        "choice_a": "A proton",
+        "choice_b": "An electron",
         "choice_c": "The whole atom",
         "choice_d": "A magnet",
-        "correct_answer": "A",
+        "correct_answer": "B",
         "answer_explanation": (
             "A photon can hit an electron and knock it out of the metal."
         ),
@@ -422,11 +426,11 @@ PHOTOELECTRIC_QUIZ = [
             "What is the minimum light frequency needed to release an electron "
             "from a metal called?"
         ),
-        "choice_a": "Threshold frequency",
-        "choice_b": "Boiling point",
-        "choice_c": "Escape velocity",
+        "choice_a": "Boiling point",
+        "choice_b": "Escape velocity",
+        "choice_c": "Threshold frequency",
         "choice_d": "Wavelength limit",
-        "correct_answer": "A",
+        "correct_answer": "C",
         "answer_explanation": (
             "The threshold frequency is the minimum frequency a photon needs to "
             "release an electron."
@@ -438,11 +442,11 @@ PHOTOELECTRIC_QUIZ = [
             "If light frequency is below the threshold, what happens no matter "
             "how bright the light is?"
         ),
-        "choice_a": "No electrons are released",
-        "choice_b": "Electrons are released faster",
-        "choice_c": "The metal melts",
-        "choice_d": "Electrons gain extra mass",
-        "correct_answer": "A",
+        "choice_a": "Electrons are released faster",
+        "choice_b": "The metal melts",
+        "choice_c": "Electrons gain extra mass",
+        "choice_d": "No electrons are released",
+        "correct_answer": "D",
         "answer_explanation": (
             "Brighter low-frequency light sends more photons, but none of them "
             "carry enough energy to release an electron."
@@ -467,11 +471,11 @@ PHOTOELECTRIC_QUIZ = [
             "What is the term for the minimum energy needed to free an electron "
             "from a specific metal?"
         ),
-        "choice_a": "Work function",
-        "choice_b": "Kinetic energy",
+        "choice_a": "Kinetic energy",
+        "choice_b": "Work function",
         "choice_c": "Threshold voltage",
         "choice_d": "Photon frequency",
-        "correct_answer": "A",
+        "correct_answer": "B",
         "answer_explanation": (
             "The work function φ is the minimum energy a metal requires to free "
             "an electron."
@@ -483,11 +487,11 @@ PHOTOELECTRIC_QUIZ = [
             "In the stopping-potential experiment, what does the elementary "
             "charge e represent in eVs = Kmax?"
         ),
-        "choice_a": "The charge of the electron",
-        "choice_b": "The charge of the photon",
-        "choice_c": "The charge of the nucleus",
+        "choice_a": "The charge of the photon",
+        "choice_b": "The charge of the nucleus",
+        "choice_c": "The charge of the electron",
         "choice_d": "A unit of frequency",
-        "correct_answer": "A",
+        "correct_answer": "C",
         "answer_explanation": (
             "e is the elementary charge carried by the electron, linking the "
             "measured stopping voltage to its kinetic energy."
@@ -499,11 +503,11 @@ PHOTOELECTRIC_QUIZ = [
             "At a fixed frequency above threshold, increasing light intensity "
             "primarily increases which quantity?"
         ),
-        "choice_a": "The photocurrent (number of photoelectrons)",
-        "choice_b": "The maximum kinetic energy per electron",
-        "choice_c": "The work function of the metal",
-        "choice_d": "The stopping potential",
-        "correct_answer": "A",
+        "choice_a": "The maximum kinetic energy per electron",
+        "choice_b": "The work function of the metal",
+        "choice_c": "The stopping potential",
+        "choice_d": "The photocurrent (number of photoelectrons)",
+        "correct_answer": "D",
         "answer_explanation": (
             "More intense light delivers more photons per second, raising the "
             "photocurrent, but each photon's energy is unchanged at fixed "
@@ -513,6 +517,10 @@ PHOTOELECTRIC_QUIZ = [
 ]
 
 
+# Answer-choice positions below are deliberately varied (not always "A") to
+# avoid a guessable pattern, while the underlying scientifically correct
+# answer text is unchanged. Distribution across these 12 questions: A x3,
+# B x3, C x3, D x3.
 RELATIVITY_QUIZ = [
     {
         "level": "Simple",
@@ -533,11 +541,11 @@ RELATIVITY_QUIZ = [
             "In the stretched-sheet picture, what happens when you place a heavy "
             "ball on the sheet?"
         ),
-        "choice_a": "The sheet bends",
-        "choice_b": "The sheet turns to ice",
+        "choice_a": "The sheet turns to ice",
+        "choice_b": "The sheet bends",
         "choice_c": "The ball disappears",
         "choice_d": "The sheet flies away",
-        "correct_answer": "A",
+        "correct_answer": "B",
         "answer_explanation": (
             "The heavy ball bends the sheet, similar to how a massive object "
             "curves spacetime around it."
@@ -546,11 +554,11 @@ RELATIVITY_QUIZ = [
     {
         "level": "Simple",
         "question": "What can massive objects like stars do to spacetime?",
-        "choice_a": "Curve it",
-        "choice_b": "Erase it",
-        "choice_c": "Freeze it",
+        "choice_a": "Erase it",
+        "choice_b": "Freeze it",
+        "choice_c": "Curve it",
         "choice_d": "Multiply it",
-        "correct_answer": "A",
+        "correct_answer": "C",
         "answer_explanation": (
             "Massive objects such as stars and planets can bend, or curve, "
             "spacetime around them."
@@ -562,11 +570,11 @@ RELATIVITY_QUIZ = [
             "According to general relativity, what can a massive star or galaxy "
             "do to light passing near it?"
         ),
-        "choice_a": "Bend its path",
-        "choice_b": "Turn it a different color permanently",
-        "choice_c": "Stop it completely",
-        "choice_d": "Make it invisible",
-        "correct_answer": "A",
+        "choice_a": "Turn it a different color permanently",
+        "choice_b": "Stop it completely",
+        "choice_c": "Make it invisible",
+        "choice_d": "Bend its path",
+        "correct_answer": "D",
         "answer_explanation": (
             "Light follows the curved paths available in spacetime, so massive "
             "objects can bend the route light takes."
@@ -588,11 +596,11 @@ RELATIVITY_QUIZ = [
     {
         "level": "Explore",
         "question": "What does general relativity say about clocks in different gravitational conditions?",
-        "choice_a": "They can run at different rates",
-        "choice_b": "They all stop working",
+        "choice_a": "They all stop working",
+        "choice_b": "They can run at different rates",
         "choice_c": "They only work in space",
         "choice_d": "They run backward",
-        "correct_answer": "A",
+        "correct_answer": "B",
         "answer_explanation": (
             "Gravity affects time, so clocks can run at different rates in "
             "different gravitational conditions."
@@ -601,11 +609,11 @@ RELATIVITY_QUIZ = [
     {
         "level": "Advanced",
         "question": "What does the equivalence principle connect?",
-        "choice_a": "Free fall and locally inertial motion",
-        "choice_b": "Light and sound",
-        "choice_c": "Electrons and protons",
+        "choice_a": "Light and sound",
+        "choice_b": "Electrons and protons",
+        "choice_c": "Free fall and locally inertial motion",
         "choice_d": "Voltage and current",
-        "correct_answer": "A",
+        "correct_answer": "C",
         "answer_explanation": (
             "The equivalence principle connects free fall with locally inertial "
             "motion, since gravity can locally resemble weightlessness."
@@ -617,11 +625,11 @@ RELATIVITY_QUIZ = [
             "In general relativity, what path do freely moving objects follow "
             "through curved spacetime?"
         ),
-        "choice_a": "Geodesics",
-        "choice_b": "Straight lines only",
-        "choice_c": "Circular orbits only",
-        "choice_d": "Random paths",
-        "correct_answer": "A",
+        "choice_a": "Straight lines only",
+        "choice_b": "Circular orbits only",
+        "choice_c": "Random paths",
+        "choice_d": "Geodesics",
+        "correct_answer": "D",
         "answer_explanation": (
             "Freely moving objects follow geodesics, the straightest possible "
             "paths through curved spacetime."
@@ -647,11 +655,11 @@ RELATIVITY_QUIZ = [
     {
         "level": "Expert",
         "question": "What does the Einstein field equation relate?",
-        "choice_a": "Spacetime curvature to matter and energy",
-        "choice_b": "Voltage to current",
+        "choice_a": "Voltage to current",
+        "choice_b": "Spacetime curvature to matter and energy",
         "choice_c": "Frequency to wavelength",
         "choice_d": "Mass to charge",
-        "correct_answer": "A",
+        "correct_answer": "B",
         "answer_explanation": (
             "The Einstein field equation links spacetime curvature (via the "
             "Einstein tensor) to matter and energy (via the stress-energy "
@@ -661,11 +669,11 @@ RELATIVITY_QUIZ = [
     {
         "level": "Expert",
         "question": "What mathematical object describes spacetime geometry in general relativity?",
-        "choice_a": "The metric tensor",
-        "choice_b": "The wave function",
-        "choice_c": "The Hamiltonian",
+        "choice_a": "The wave function",
+        "choice_b": "The Hamiltonian",
+        "choice_c": "The metric tensor",
         "choice_d": "The partition function",
-        "correct_answer": "A",
+        "correct_answer": "C",
         "answer_explanation": (
             "The metric tensor gμν defines spacetime intervals and the "
             "geodesics followed by freely moving bodies and light."
@@ -674,11 +682,11 @@ RELATIVITY_QUIZ = [
     {
         "level": "Expert",
         "question": "Which of the following is a prediction of general relativity?",
-        "choice_a": "Gravitational waves",
-        "choice_b": "The photoelectric effect",
-        "choice_c": "Nuclear fission",
-        "choice_d": "Quantum entanglement",
-        "correct_answer": "A",
+        "choice_a": "The photoelectric effect",
+        "choice_b": "Nuclear fission",
+        "choice_c": "Quantum entanglement",
+        "choice_d": "Gravitational waves",
+        "correct_answer": "D",
         "answer_explanation": (
             "General relativity predicts gravitational waves, later confirmed "
             "by LIGO in 2015."
