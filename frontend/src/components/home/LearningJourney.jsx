@@ -1,11 +1,4 @@
-const journeySteps = [
-  "Discover",
-  "Understand",
-  "Connect to Real Life",
-  "Learn at Your Level",
-  "Test Your Knowledge",
-  "Explore Data",
-];
+import { Link } from "react-router-dom";
 
 const learningLevels = [
   { name: "Simple", audience: "Grades 4–6", className: "level-simple" },
@@ -16,27 +9,13 @@ const learningLevels = [
 
 function LearningJourney() {
   return (
-    <section className="home-section journey-section" aria-labelledby="journey-title">
+    <section className="home-section level-section" aria-labelledby="levels-title">
       <div className="container">
-        <div className="section-heading section-heading-centered">
-          <p className="eyebrow">Follow your curiosity</p>
-          <h2 id="journey-title">Your Learning Journey</h2>
-          <p>Move from a big question to a deeper understanding, one step at a time.</p>
-        </div>
-
-        <ol className="journey-path">
-          {journeySteps.map((step, index) => (
-            <li key={step}>
-              <span className="journey-number">{index + 1}</span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="level-preview" aria-labelledby="levels-title">
-          <div className="level-preview-copy">
+        <div className="level-preview">
+          <div className="section-heading section-heading-centered">
             <p className="eyebrow">Learn your way</p>
-            <h3 id="levels-title">Choose your learning level</h3>
+            <h2 id="levels-title">Learn at Your Level</h2>
+            <p>The same Nobel-winning science, explained for every learner.</p>
           </div>
           <div className="level-grid">
             {learningLevels.map((level) => (
@@ -46,6 +25,11 @@ function LearningJourney() {
                 <small>{level.audience}</small>
               </article>
             ))}
+          </div>
+          <div className="level-preview-cta">
+            <Link className="button button-primary" to="/learn">
+              Start Learning <span aria-hidden="true">→</span>
+            </Link>
           </div>
         </div>
       </div>

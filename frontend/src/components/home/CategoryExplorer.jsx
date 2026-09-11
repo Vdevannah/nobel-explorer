@@ -66,8 +66,7 @@ function CategoryExplorer() {
     <section className="home-section category-section" aria-labelledby="categories-title">
       <div className="container">
         <div className="category-explorer-panel">
-          <p className="eyebrow">Pick a prize</p>
-          <h2 id="categories-title">Start exploring <span aria-hidden="true">✨</span></h2>
+          <h2 className="eyebrow" id="categories-title">Explore the Nobel Prizes</h2>
           <p className="category-explorer-description">
             Choose a category and year, then meet the laureates who won it.
           </p>

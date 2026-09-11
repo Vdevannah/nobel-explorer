@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import nobelScienceHero from "../../assets/nobel-science-hero.png";
 
 function HeroSection() {
@@ -20,14 +22,28 @@ function HeroSection() {
             Nobel Explorer helps students understand Nobel-winning discoveries,
             why they matter, and how their impact reaches into everyday life.
           </p>
+          <div className="home-hero-actions">
+            <Link className="button button-primary" to="/prizes">
+              Explore Nobel Prizes <span aria-hidden="true">→</span>
+            </Link>
+            <Link className="button button-secondary" to="/learn">
+              Start Learning <span aria-hidden="true">→</span>
+            </Link>
+          </div>
         </div>
 
-        <figure className="home-hero-artwork">
-          <img
-            alt="Nobel science illustration featuring the Alfred Nobel medal, laboratory glassware, books, an atom, and a microscope."
-            src={nobelScienceHero}
-          />
-        </figure>
+        <div className="home-hero-visual">
+          <figure className="home-hero-artwork">
+            <img
+              alt="Nobel science illustration featuring the Alfred Nobel medal, laboratory glassware, books, an atom, and a microscope."
+              src={nobelScienceHero}
+            />
+          </figure>
+          <blockquote className="home-hero-quote">
+            <p>The important thing is not to stop questioning.</p>
+            <cite>— Albert Einstein</cite>
+          </blockquote>
+        </div>
       </div>
     </section>
   );

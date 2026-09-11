@@ -17,24 +17,12 @@
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
-  font-family: var(--font-heading);
-  font-size: clamp(1.1rem, 2vw, 1.35rem);
-  letter-spacing: 0.015em;
 }
 
-.brand-mark {
-  display: grid;
-  width: 2.3rem;
-  aspect-ratio: 1;
-  place-items: center;
-  border: 1px solid rgba(244, 214, 138, 0.7);
-  border-radius: 50%;
-  color: var(--color-background-deep);
-  background: linear-gradient(145deg, var(--color-gold-light), var(--color-gold));
-  font-size: 1.1rem;
-  font-weight: 700;
-  box-shadow: 0 0 1.5rem rgba(217, 174, 85, 0.2);
+.brand-logo {
+  display: block;
+  height: 3.5rem;
+  width: auto;
 }
 
 .nav-links {
@@ -294,6 +282,10 @@
     gap: var(--space-5);
     overflow-x: auto;
     padding-bottom: var(--space-1);
+  }
+
+  .brand-logo {
+    height: 2.75rem;
   }
 
   .hero {

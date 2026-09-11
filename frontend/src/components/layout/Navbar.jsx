@@ -1,14 +1,13 @@
 import { Link, NavLink } from "react-router-dom";
 
+import nobelExplorerLogo from "../../assets/branding/nobel-explorer-logo-navbar.png";
+
 function Navbar() {
   return (
     <header className="site-header">
       <nav className="navbar container" aria-label="Primary navigation">
         <Link className="brand" to="/" aria-label="Nobel Explorer home">
-          <span className="brand-mark" aria-hidden="true">
-            <span>N</span>
-          </span>
-          <span>Nobel Explorer</span>
+          <img className="brand-logo" src={nobelExplorerLogo} alt="Nobel Explorer" />
         </Link>
 
         <div className="nav-links">
