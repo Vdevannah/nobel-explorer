@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import EducationalEmptyState from "../components/laureates/EducationalEmptyState";
 import { checkQuizAnswer, getContributionQuiz, getLearnTopics } from "../services/api";
+import { formatNameList } from "../utils/nameList";
 
 const levels = ["Simple", "Explore", "Advanced", "Expert"];
 const choiceLetters = ["A", "B", "C", "D"];
@@ -44,7 +45,7 @@ function ContributionPicker({ topics, selectedId, onSelect }) {
           >
             <span className="quiz-contribution-option-copy">
               <strong>{topic.title}</strong>
-              <small>{topic.credited_laureates?.map((credit) => credit.name).join(" & ") || topic.laureate_name}</small>
+              <small>{topic.credited_laureates?.length ? formatNameList(topic.credited_laureates.map((credit) => credit.name)) : topic.laureate_name}</small>
             </span>
             <span className={`learn-lesson-type learn-lesson-type--${topic.contribution_type.toLowerCase()}`}>
               {contributionTypeLabels[topic.contribution_type]}

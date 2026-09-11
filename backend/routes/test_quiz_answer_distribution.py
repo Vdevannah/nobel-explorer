@@ -1,10 +1,11 @@
 """Regression coverage for the "every correct answer is A" fix.
 
-Exercises the real, committed Einstein (contributions 38/39) and mRNA
-(contribution 609) quiz data through the actual HTTP routes -- both to prove
-the balanced A/B/C/D distribution landed correctly in the seeded data, and to
-prove answer checking still works correctly for questions whose correct
-answer is no longer "A" after the reordering.
+Exercises the real, committed Einstein (contributions 38/39), mRNA
+(contribution 609), and click chemistry (contribution 779) quiz data through
+the actual HTTP routes -- both to prove the balanced A/B/C/D distribution
+landed correctly in the seeded data, and to prove answer checking still
+works correctly for questions whose correct answer is no longer "A" after
+the reordering.
 """
 from collections import Counter
 
@@ -17,7 +18,7 @@ from backend.repositories import quiz_question_repository
 
 client = TestClient(app)
 
-DASHBOARD_CONTRIBUTIONS = (38, 39, 609)
+DASHBOARD_CONTRIBUTIONS = (38, 39, 609, 779)
 
 
 def test_every_quiz_question_has_exactly_one_valid_correct_answer():

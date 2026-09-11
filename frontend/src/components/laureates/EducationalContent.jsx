@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { getContributionById, getContributionQuiz } from "../../services/api";
 import { getConnectionVisual, getContributionVisual } from "../../data/educationalVisuals";
+import { formatNameList } from "../../utils/nameList";
 import EducationalEmptyState from "./EducationalEmptyState";
 import EducationalVisual from "./EducationalVisual";
 
@@ -226,7 +227,7 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
         <p className="eyebrow">Learn at your level</p>
         <h2 id="learn-title">Understand the idea</h2>
         {contribution.credited_laureates?.length > 1 && (
-          <p>{contribution.credited_laureates.map((credit) => credit.name).join(" & ")}</p>
+          <p>{formatNameList(contribution.credited_laureates.map((credit) => credit.name))}</p>
         )}
       </div>
       <div className="learning-tabs" role="tablist" aria-label="Explanation level">

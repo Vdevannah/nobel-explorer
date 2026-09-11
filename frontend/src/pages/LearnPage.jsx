@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import EducationalEmptyState from "../components/laureates/EducationalEmptyState";
 import { getLearnTopics } from "../services/api";
+import { formatNameList } from "../utils/nameList";
 
 const levels = ["Simple", "Explore", "Advanced", "Expert"];
 
@@ -74,7 +75,7 @@ function LessonCard({ topic, preferredLevel }) {
       : "Beyond the Nobel Prize";
 
   const credits = topic.credited_laureates ?? [];
-  const names = credits.length ? credits.map((credit) => credit.name).join(" & ") : topic.laureate_name;
+  const names = credits.length ? formatNameList(credits.map((credit) => credit.name)) : topic.laureate_name;
   const firstCredit = credits[0];
   const lessonHref = `/laureates/${firstCredit?.laureate_id ?? topic.laureate_id}?contribution=${topic.contribution_id}&section=learn&level=${preferredLevel}`;
 

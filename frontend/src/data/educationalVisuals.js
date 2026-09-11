@@ -18,6 +18,13 @@ import mrnaSimpleImage from "../assets/education/mrna-simple.png";
 import mrnaVaccinesApplicationImage from "../assets/education/mrna-vaccines-application.png";
 import mrnaFutureMedicinesApplicationImage from "../assets/education/mrna-future-medicines-application.png";
 import mrnaRnaSensingApplicationImage from "../assets/education/mrna-rna-sensing-application.png";
+import clickSimpleImage from "../assets/education/click-simple.png";
+import clickExploreImage from "../assets/education/click-explore.png";
+import clickAdvancedImage from "../assets/education/click-advanced.png";
+import clickExpertImage from "../assets/education/click-expert.png";
+import clickVisualizingBiomoleculesImage from "../assets/education/click-visualizing-biomolecules.png";
+import clickMedicinesMaterialsImage from "../assets/education/click-medicines-materials.png";
+import clickTargetedCancerResearchImage from "../assets/education/click-targeted-cancer-research.png";
 import solarImage from "../assets/education/solar-panels.jpg";
 
 export const contributionVisuals = {
@@ -91,6 +98,26 @@ export const contributionVisuals = {
       Expert: ["TLR3/7/8", "RIG-I/MDA5", "Ψ vs m1Ψ"],
     },
   },
+  "Click Chemistry and Bioorthogonal Chemistry": {
+    thumbnail: {
+      label: "N₃ + ⧓",
+      alt: "Azide and alkyne joining in a click reaction",
+    },
+    assetsByLevel: {
+      Simple: clickSimpleImage,
+      Explore: clickExploreImage,
+      Advanced: clickAdvancedImage,
+      Expert: clickExpertImage,
+    },
+    alt: "Azide and alkyne building blocks clicking together, and bioorthogonal chemistry labeling molecules in living cells",
+    caption: null,
+    levelCues: {
+      Simple: ["building blocks", "click!", "living cells"],
+      Explore: ["azide + alkyne", "copper catalyst", "bioorthogonal chemistry"],
+      Advanced: ["CuAAC", "SPAAC", "cyclooctyne ring strain"],
+      Expert: ["chemoselectivity", "metabolic labeling", "chemical reporter"],
+    },
+  },
 };
 
 export const connectionVisuals = {
@@ -138,6 +165,21 @@ export const connectionVisuals = {
     kind: "mrna-rna-sensing",
     imageUrl: mrnaRnaSensingApplicationImage,
     alt: "Foreign RNA recognized by innate immune sensors such as TLR7/8 and RIG-I, triggering immune signaling and response",
+  },
+  "Visualizing Biomolecules in Living Systems": {
+    kind: "click-visualizing-biomolecules",
+    imageUrl: clickVisualizingBiomoleculesImage,
+    alt: "An azide-modified sugar incorporated into cell-surface glycans and labeled with a fluorescent bioorthogonal probe for visualization",
+  },
+  "Building Better Medicines": {
+    kind: "click-medicines-materials",
+    imageUrl: clickMedicinesMaterialsImage,
+    alt: "Molecular building blocks joined by click chemistry into a targeted drug candidate that binds a target cell and delivers a therapeutic effect",
+  },
+  "Targeted Cancer Research": {
+    kind: "click-targeted-cancer-research",
+    imageUrl: clickTargetedCancerResearchImage,
+    alt: "A bioorthogonal handle on a cancer-targeting molecule reacting selectively with a fluorescent probe at a tumor for imaging or therapeutic delivery",
   },
 };
 
