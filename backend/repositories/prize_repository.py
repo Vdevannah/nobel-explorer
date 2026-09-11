@@ -1,7 +1,8 @@
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from backend.models.award_affiliation import AwardAffiliation
+from backend.models.category import Category
 from backend.models.laureate_prize import LaureatePrize
 from backend.models.prize import Prize
 
@@ -14,11 +15,23 @@ def get_all(db: Session) -> list[Prize]:
 def get_paginated(
     db: Session,
     limit: int,
-    offset: int
+    offset: int,
+    category: str | None = None,
+    year: int | None = None
 ) -> list[Prize]:
+    if category is not None:
+        statement = (
+            select(Prize)
+            .join(Prize.category)
+            .options(contains_eager(Prize.category))
+            .where(Category.name == category)
+        )
+    else:
+        statement = select(Prize).options(joinedload(Prize.category))
+    if year is not None:
+        statement = statement.where(Prize.year == year)
     statement = (
-        select(Prize)
-        .options(joinedload(Prize.category))
+        statement
         .order_by(Prize.year, Prize.prize_id)
         .offset(offset)
         .limit(limit)
@@ -26,8 +39,18 @@ def get_paginated(
     return list(db.scalars(statement).all())
 
 
-def count_all(db: Session) -> int:
+def count_all(
+    db: Session,
+    category: str | None = None,
+    year: int | None = None
+) -> int:
     statement = select(func.count()).select_from(Prize)
+    if category is not None:
+        statement = statement.join(Prize.category).where(
+            Category.name == category
+        )
+    if year is not None:
+        statement = statement.where(Prize.year == year)
     return db.scalar(statement) or 0
 
 

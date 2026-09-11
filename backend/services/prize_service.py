@@ -13,10 +13,14 @@ from backend.services.exceptions import ResourceNotFoundError
 def list_prizes(
     db: Session,
     limit: int,
-    offset: int
+    offset: int,
+    category: str | None = None,
+    year: int | None = None
 ) -> PaginatedPrizesResponse:
-    prizes = prize_repository.get_paginated(db, limit, offset)
-    total = prize_repository.count_all(db)
+    prizes = prize_repository.get_paginated(
+        db, limit, offset, category, year
+    )
+    total = prize_repository.count_all(db, category, year)
 
     return PaginatedPrizesResponse(
         items=prizes,

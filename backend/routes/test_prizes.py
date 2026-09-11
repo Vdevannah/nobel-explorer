@@ -62,6 +62,65 @@ def test_list_prizes_rejects_invalid_pagination():
     assert client.get("/prizes?offset=-1").status_code == 422
 
 
+def test_list_prizes_filters_by_category_and_year():
+    category_response = client.get(
+        "/prizes",
+        params={"category": "Chemistry", "limit": 100}
+    )
+    year_response = client.get(
+        "/prizes",
+        params={"year": 2001, "limit": 100}
+    )
+    combined_response = client.get(
+        "/prizes",
+        params={"category": "Chemistry", "year": 2001}
+    )
+
+    assert category_response.status_code == 200
+    assert category_response.json()["items"]
+    assert all(
+        prize["category"]["name"] == "Chemistry"
+        for prize in category_response.json()["items"]
+    )
+    assert year_response.status_code == 200
+    assert year_response.json()["items"]
+    assert all(
+        prize["year"] == 2001
+        for prize in year_response.json()["items"]
+    )
+    assert combined_response.status_code == 200
+    assert combined_response.json()["total"] == 1
+    assert combined_response.json()["items"][0]["year"] == 2001
+    assert combined_response.json()["items"][0]["category"]["name"] == "Chemistry"
+
+
+def test_list_prizes_filter_can_return_empty_results():
+    response = client.get(
+        "/prizes",
+        params={"category": "No Such Nobel Category"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["items"] == []
+    assert response.json()["total"] == 0
+
+
+def test_list_prizes_rejects_out_of_range_year():
+    assert client.get("/prizes?year=1800").status_code == 422
+    assert client.get("/prizes?year=2030").status_code == 422
+
+
+def test_list_prizes_filter_combination_can_return_empty_results():
+    response = client.get(
+        "/prizes",
+        params={"category": "Economic Sciences", "year": 1901}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["items"] == []
+    assert response.json()["total"] == 0
+
+
 def test_get_shared_prize_detail():
     prize_id = get_2001_chemistry_prize_id()
 

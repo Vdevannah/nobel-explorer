@@ -32,9 +32,21 @@ def list_prizes(
         ge=0,
         description="Number of results to skip"
     ),
+    category: str | None = Query(
+        default=None,
+        description="Nobel Prize category filter"
+    ),
+    year: int | None = Query(
+        default=None,
+        ge=1901,
+        le=2025,
+        description="Nobel Prize award year filter"
+    ),
     db: Session = Depends(get_db)
 ):
-    return prize_service.list_prizes(db, limit, offset)
+    return prize_service.list_prizes(
+        db, limit, offset, category, year
+    )
 
 
 @router.get(
