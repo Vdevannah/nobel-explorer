@@ -216,7 +216,7 @@
 
 .featured-copy h2 {
   margin-bottom: var(--space-1);
-  font-size: clamp(1.15rem, 1.6vw, 1.35rem);
+  font-size: clamp(1.5rem, 1.6vw, 1.7rem);
   letter-spacing: -0.035em;
 }
 
@@ -226,7 +226,7 @@
 }
 
 .featured-copy > p:last-of-type {
-  font-size: 0.88rem;
+  font-size: 1.125rem;
 }
 
 .section-heading-centered {
@@ -264,13 +264,14 @@
 
 .category-explorer-panel .eyebrow {
   margin-bottom: var(--space-1);
+  font-size: 1rem;
 }
 
 .category-explorer-description {
   max-width: 34rem;
   margin-bottom: var(--space-2);
   color: var(--color-text-secondary);
-  font-size: 0.88rem;
+  font-size: 1.125rem;
 }
 
 .category-selector {
@@ -287,7 +288,7 @@
   color: var(--color-text-primary);
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-surface) 55%, var(--color-background-deep)), var(--color-background-deep));
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 1.06rem;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
@@ -373,6 +374,7 @@
   color: var(--color-gold-light);
   background: var(--color-background-deep);
   appearance: textfield;
+  font-size: 1.125rem;
   font-weight: 800;
   text-align: center;
 }
@@ -395,7 +397,7 @@
   color: var(--color-text-primary);
   background: linear-gradient(135deg, var(--color-purple), color-mix(in srgb, var(--color-purple) 65%, var(--color-surface)));
   box-shadow: 0 0 1.5rem color-mix(in srgb, var(--color-purple) 22%, transparent);
-  font-size: 0.88rem;
+  font-size: 1.125rem;
   font-weight: 800;
 }
 
@@ -427,6 +429,7 @@
 
 .featured-eyebrow {
   margin-bottom: var(--space-3);
+  font-size: 1rem;
 }
 
 .featured-card-row {
@@ -511,7 +514,7 @@
 .featured-award {
   margin-bottom: var(--space-1);
   color: var(--color-gold-light);
-  font-size: 0.8rem;
+  font-size: 1.06rem;
   font-weight: 750;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -525,12 +528,13 @@
 .featured-contribution {
   margin: 0 0 var(--space-2);
   color: var(--color-purple-light);
-  font-size: 0.88rem;
+  font-size: 1.125rem;
   font-weight: 700;
 }
 
 .featured-cta {
   margin-top: var(--space-2);
+  font-size: 1.19rem;
 }
 
 @media (min-width: 52.001rem) {
@@ -572,6 +576,18 @@
   overflow: hidden;
 }
 
+.how-it-works-section .eyebrow {
+  font-size: 1rem;
+}
+
+.how-it-works-section .section-heading h2 {
+  font-size: clamp(1.7rem, 3.2vw, 2.3rem);
+}
+
+.how-it-works-section .section-heading > p:last-child {
+  font-size: 1.2rem;
+}
+
 .how-it-works-steps {
   display: flex;
   align-items: center;
@@ -611,24 +627,24 @@
   border-radius: 50%;
   color: var(--color-background-deep);
   background: linear-gradient(135deg, var(--color-gold-light), var(--color-gold));
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 
 .how-it-works-icon {
-  font-size: 2.2rem;
+  font-size: 2.25rem;
 }
 
 .how-it-works-title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 1.25rem;
   font-weight: 750;
 }
 
 .how-it-works-description {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.78rem;
+  font-size: 1.05rem;
   line-height: 1.4;
 }
 
@@ -655,14 +671,26 @@
   margin-bottom: var(--space-4);
 }
 
+.level-preview .eyebrow {
+  font-size: 1rem;
+}
+
 .level-preview h2 {
   margin-bottom: var(--space-1);
+  font-size: 1.45rem;
+}
+
+.level-preview .section-heading > p:last-child {
   font-size: 1.2rem;
 }
 
 .level-preview-cta {
   margin-top: var(--space-4);
   text-align: center;
+}
+
+.level-preview-cta .button {
+  font-size: 1.2rem;
 }
 
 .level-grid {
@@ -691,12 +719,12 @@
 }
 
 .level-card strong {
-  font-size: 0.88rem;
+  font-size: 1.125rem;
 }
 
 .level-card small {
   color: var(--color-text-secondary);
-  font-size: 0.7rem;
+  font-size: 1rem;
 }
 
 .level-card-description {
@@ -805,6 +833,10 @@
 
   .category-selector-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .category-selector {
+    font-size: 0.95rem;
   }
 
   .category-explorer-actions {
