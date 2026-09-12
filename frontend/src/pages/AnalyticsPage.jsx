@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import {
   getAnalyticsAgeDistribution,
@@ -11,6 +11,19 @@ import {
   getCategories,
 } from "../services/api";
 import { getCountryFlag } from "../utils/countryFlags";
+
+// react-simple-maps (and the d3-geo/topojson-client stack it pulls in)
+// and the bundled world topojson are only needed once someone actually
+// views this section, so they're split into their own chunk instead of
+// shipping in the app's main bundle for every page.
+const GeographyExplorer = lazy(() => import("../components/analytics/GeographyExplorer"));
+
+// The map/list geography view needs the complete set of recorded birth
+// countries (not just a short top-N slice) so every laureate contributes
+// to the choropleth and the ranked list -- 200 comfortably covers the
+// dataset's ~100 distinct birth countries, matching the backend's raised
+// /top-countries limit ceiling.
+const ALL_COUNTRIES_LIMIT = 200;
 
 const CHART_COLORS = ["#7c4dff", "#b339e7", "#f04468", "#e8b83e", "#72c77b", "#43c1b5"];
 
@@ -139,13 +152,22 @@ function CategoryDonut({ data }) {
   );
 }
 
-function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ariaLabel, emptyMessage }) {
+// height defaults to the original compact ratio; panels whose CSS Grid row
+// gets stretched much taller by a bigger sibling (e.g. this chart next to
+// the donut+legend panel) can pass a taller value so the plot itself fills
+// that space instead of leaving it blank below the x-axis. Panels that
+// already pair with a similarly-sized sibling (e.g. this chart next to the
+// fixed-height age-bar-chart) can leave it at the default.
+function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ariaLabel, emptyMessage, height = 160 }) {
   const width = 720;
-  const height = 160;
+  // topPadding reserves headroom above the highest point so its
+  // larger point-value label doesn't clip the top of the viewBox.
+  const topPadding = 34;
+  const bottomPadding = 28;
   const maximum = Math.max(...data.map((item) => item[yKey]), 1);
   const points = data.map((item, index) => {
     const x = data.length === 1 ? width / 2 : 20 + (index / (data.length - 1)) * (width - 40);
-    const y = height - 28 - (item[yKey] / maximum) * (height - 48);
+    const y = height - bottomPadding - (item[yKey] / maximum) * (height - bottomPadding - topPadding);
     return { ...item, x, y };
   });
 
@@ -154,14 +176,14 @@ function TrendLineChart({ data, xKey, yKey, formatX, formatY, formatTooltip, ari
   return (
     <div className="decade-chart">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={ariaLabel}>
-        <line className="chart-axis" x1="20" x2={width - 20} y1={height - 28} y2={height - 28} />
+        <line className="chart-axis" x1="20" x2={width - 20} y1={height - bottomPadding} y2={height - bottomPadding} />
         <polyline className="chart-line" points={points.map(({ x, y }) => `${x},${y}`).join(" ")} />
         {points.map((point, index) => (
           <g key={point[xKey]}>
             <circle className="chart-point" cx={point.x} cy={point.y} r="5">
               <title>{formatTooltip ? formatTooltip(point) : `${formatX(point[xKey])}: ${formatY(point[yKey])}`}</title>
             </circle>
-            <text x={point.x} y={point.y - 10} textAnchor="middle" className="chart-point-value">{formatY(point[yKey])}</text>
+            <text x={point.x} y={point.y - 14} textAnchor="middle" className="chart-point-value">{formatY(point[yKey])}</text>
             {(data.length <= 6 || index % 2 === 0 || index === points.length - 1) && (
               <text x={point.x} y={height - 6} textAnchor="middle">{formatX(point[xKey])}</text>
             )}
@@ -356,7 +378,7 @@ function AnalyticsPage() {
       getAnalyticsSummary(filters),
       getAnalyticsCategoryCounts({ startYear: filterStartYear, endYear: filterEndYear, signal: controller.signal }),
       getAnalyticsPrizesByDecade(filters),
-      getAnalyticsTopCountries({ limit: 5, ...filters }),
+      getAnalyticsTopCountries({ limit: ALL_COUNTRIES_LIMIT, ...filters }),
       getAnalyticsAgeDistribution(filters),
       getAnalyticsWomenByEra(filters),
       getCategories({ signal: controller.signal }),
@@ -451,7 +473,7 @@ function AnalyticsPage() {
           </section>
 
           <section className="analytics-grid analytics-grid-top">
-            <article className="analytics-panel" id="prizes-through-time"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p><h2>Nobel Prizes Through Time</h2></div></header><TrendLineChart data={prizesByDecade} xKey="decade" yKey="prize_count" formatX={(decade) => `${decade}s`} formatY={(count) => count} ariaLabel="Number of prizes awarded per decade" emptyMessage="No decade data is available." /></article>
+            <article className="analytics-panel" id="prizes-through-time"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p><h2>Nobel Prizes Through Time</h2></div></header><TrendLineChart data={prizesByDecade} xKey="decade" yKey="prize_count" formatX={(decade) => `${decade}s`} formatY={(count) => count} ariaLabel="Number of prizes awarded per decade" emptyMessage="No decade data is available." height={360} /></article>
             <article className="analytics-panel analytics-panel-wide" id="category-donut"><header><div><p className="panel-kicker">{formatCategoryComparisonEyebrow(filterStartYear, filterEndYear)}</p><h2>Laureates by Category</h2><p className="panel-note">All categories shown for comparison.</p></div></header><CategoryDonut data={categoryCounts} /></article>
           </section>
 
@@ -463,9 +485,10 @@ function AnalyticsPage() {
           <section aria-labelledby="global-impact-title">
             <div className="analytics-section-heading">
               <p className="panel-kicker">Where laureates come from</p>
-              <h2 id="global-impact-title">Global Impact</h2>
+              <h2 id="global-impact-title">Explore Nobel Laureates Around the World</h2>
+              <p className="panel-note">See where Nobel laureates were born and explore their global representation.</p>
             </div>
-            <article className="analytics-panel analytics-panel-wide" id="top-countries"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p><h2>Top Countries by Laureates</h2><p className="panel-note">Birthplace, not nationality or citizenship.</p></div></header><RankedBars data={topCountries} labelKey="country" emptyMessage="No country data is available." limit={5} showRank showFlag /></article>
+            <article className="analytics-panel analytics-panel-wide" id="geography-explorer"><header><div><p className="panel-kicker">{formatFilterEyebrow(filterCategory, filterStartYear, filterEndYear)}</p></div></header><Suspense fallback={<p className="analytics-loading geo-explorer-loading" role="status">Loading world map…</p>}><GeographyExplorer data={topCountries} emptyMessage="No country data is available." /></Suspense></article>
           </section>
 
           <section className="analytics-subsection-header">

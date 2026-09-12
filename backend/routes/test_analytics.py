@@ -493,3 +493,121 @@ def test_analytics_summary_empty_filtered_result_for_nonexistent_category():
     ).json()
     assert any(row["decade"] == 1950 for row in year_1956_decade)
     assert any(row["decade"] == 1970 for row in year_1972_decade)
+
+
+# ============================================================
+# World-map geography section -- the map/list views reuse this same
+# /top-countries endpoint (no new endpoint or duplicated aggregation
+# logic), now called with a high limit to retrieve the complete set of
+# birth countries instead of only a top-N slice. These tests cover the
+# raised limit ceiling and confirm the endpoint's existing filter
+# semantics still hold at that limit.
+# ============================================================
+
+def test_top_countries_unfiltered_can_return_the_complete_country_set():
+    capped_at_old_ceiling = client.get(
+        "/analytics/top-countries", params={"limit": 50}
+    )
+    uncapped = client.get("/analytics/top-countries", params={"limit": 200})
+
+    assert capped_at_old_ceiling.status_code == 200
+    assert uncapped.status_code == 200
+    capped_data = capped_at_old_ceiling.json()
+    uncapped_data = uncapped.json()
+
+    # The previous ceiling (50) must have actually been truncating real
+    # data, otherwise raising it proves nothing.
+    assert len(capped_data) == 50
+    assert len(uncapped_data) > 50
+    assert all(set(row) == {"country", "laureate_count"} for row in uncapped_data)
+
+    # Every country visible at the old, smaller limit must still appear,
+    # unchanged, in the uncapped response -- raising the ceiling must
+    # only ever reveal more rows, never alter existing ones.
+    uncapped_by_country = {row["country"]: row["laureate_count"] for row in uncapped_data}
+    for row in capped_data:
+        assert uncapped_by_country[row["country"]] == row["laureate_count"]
+
+
+def test_top_countries_limit_rejects_values_above_the_new_ceiling():
+    response = client.get("/analytics/top-countries", params={"limit": 201})
+    assert response.status_code == 422
+
+
+def test_top_countries_category_filtered_geography_is_a_subset():
+    uncapped = client.get(
+        "/analytics/top-countries", params={"limit": 200}
+    ).json()
+    chemistry = client.get(
+        "/analytics/top-countries",
+        params={"limit": 200, "category": "Chemistry"}
+    ).json()
+
+    assert chemistry
+    uncapped_by_country = {row["country"]: row["laureate_count"] for row in uncapped}
+    for row in chemistry:
+        assert row["country"] in uncapped_by_country
+        assert row["laureate_count"] <= uncapped_by_country[row["country"]]
+
+
+def test_top_countries_year_filtered_geography_matches_the_range():
+    modern = client.get(
+        "/analytics/top-countries",
+        params={"limit": 200, "start_year": 2000}
+    ).json()
+    all_time = client.get(
+        "/analytics/top-countries", params={"limit": 200}
+    ).json()
+
+    assert modern
+    modern_total = sum(row["laureate_count"] for row in modern)
+    all_time_total = sum(row["laureate_count"] for row in all_time)
+    assert 0 < modern_total < all_time_total
+
+
+def test_top_countries_combined_category_and_year_filter():
+    combined = client.get(
+        "/analytics/top-countries",
+        params={
+            "limit": 200,
+            "category": "Physics",
+            "start_year": 1950,
+            "end_year": 2000,
+        },
+    ).json()
+    category_only = client.get(
+        "/analytics/top-countries",
+        params={"limit": 200, "category": "Physics"},
+    ).json()
+
+    assert combined
+    combined_total = sum(row["laureate_count"] for row in combined)
+    category_only_total = sum(row["laureate_count"] for row in category_only)
+    # Narrowing an already-category-filtered population by a year range
+    # can only ever hold steady or shrink it further, never grow it.
+    assert combined_total <= category_only_total
+
+
+def test_top_countries_combined_filter_empty_result():
+    response = client.get(
+        "/analytics/top-countries",
+        params={
+            "limit": 200,
+            "category": "CATEGORY-THAT-DOES-NOT-EXIST",
+            "start_year": 1950,
+            "end_year": 2000,
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_top_countries_geography_total_is_internally_consistent():
+    # The sum of every country's laureate_count at the uncapped limit is
+    # the same "known birth country" population the rest of the
+    # dashboard already relies on -- it must be positive, and narrowing
+    # by category must never invent laureates that don't exist overall.
+    uncapped = client.get("/analytics/top-countries", params={"limit": 200}).json()
+    total = sum(row["laureate_count"] for row in uncapped)
+    assert total > 0
+    assert all(row["laureate_count"] > 0 for row in uncapped)

@@ -199,8 +199,14 @@ def get_top_countries(
     limit: int = Query(
         default=5,
         ge=1,
-        le=50,
-        description="Maximum number of countries to return"
+        le=200,
+        description=(
+            "Maximum number of countries to return. The dataset currently "
+            "has 100 distinct recorded birth countries; the ceiling of 200 "
+            "leaves headroom while still rejecting unreasonable input. A "
+            "caller that needs the complete set (e.g. the world map) "
+            "should pass a high limit such as 200."
+        )
     ),
     category: str | None = Query(
         default=None,

@@ -14,15 +14,20 @@
   padding-block: clamp(1.25rem, 2.5vw, 1.75rem) var(--space-3);
 }
 
+.analytics-hero .eyebrow {
+  font-size: 1rem;
+}
+
 .analytics-hero h1 {
   margin-bottom: var(--space-1);
-  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  font-size: clamp(1.8rem, 3.5vw, 2.2rem);
   letter-spacing: -0.035em;
 }
 
 .analytics-hero p:last-child {
   margin-bottom: 0;
   color: var(--color-text-secondary);
+  font-size: 1.125rem;
 }
 
 /* Sits directly above the category-required deep-dive panels it
@@ -41,7 +46,7 @@
 .analytics-subsection-header h2 {
   margin: 0;
   font-family: var(--font-body);
-  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-size: clamp(1.5rem, 2.5vw, 1.7rem);
   font-weight: 750;
 }
 
@@ -50,7 +55,7 @@
   min-width: min(100%, 19rem);
   gap: var(--space-2);
   color: var(--color-text-secondary);
-  font-size: 0.82rem;
+  font-size: 1rem;
   font-weight: 750;
 }
 
@@ -63,6 +68,7 @@
   color: var(--color-text-primary);
   background: var(--color-surface);
   font: inherit;
+  font-size: 1.0625rem;
 }
 
 .analytics-category-control input {
@@ -90,6 +96,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+.analytics-filter-actions .button {
+  font-size: 1.09rem;
 }
 
 /* The shared .button has no disabled treatment of its own, so a
@@ -163,7 +173,7 @@
 }
 
 .analytics-metric p {
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -172,13 +182,13 @@
 .analytics-metric strong {
   color: var(--color-gold-light);
   font-family: var(--font-heading);
-  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  font-size: clamp(1.75rem, 2.6vw, 1.875rem);
   font-weight: 500;
   line-height: 1.15;
 }
 
 .analytics-metric > div span {
-  font-size: 0.82rem;
+  font-size: 1rem;
 }
 
 .analytics-grid {
@@ -219,21 +229,21 @@
 .analytics-section-heading h2 {
   margin: 0;
   font-family: var(--font-body);
-  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-size: clamp(1.5rem, 2.5vw, 1.7rem);
   font-weight: 750;
 }
 
 .analytics-panel h2 {
   margin: 0;
   font-family: var(--font-body);
-  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
   font-weight: 750;
 }
 
 .panel-kicker {
   margin-bottom: var(--space-1);
   color: var(--color-gold-light);
-  font-size: 0.69rem;
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -245,7 +255,7 @@
 .panel-note {
   margin: var(--space-1) 0 0;
   color: var(--color-text-secondary);
-  font-size: 0.74rem;
+  font-size: 1.1rem;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -287,15 +297,20 @@
   position: relative;
   z-index: 1;
   display: grid;
+  gap: 0.22rem;
+  place-content: center;
   text-align: center;
 }
 
 .donut-chart strong {
-  font-size: 1.4rem;
+  font-size: 1.8rem;
+  line-height: 1.1;
 }
 
 .donut-chart small {
   color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.1;
 }
 
 .analytics-legend,
@@ -313,7 +328,7 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: 1.1rem;
 }
 
 .analytics-legend i {
@@ -329,6 +344,7 @@
 .analytics-legend small {
   min-width: 3ch;
   color: var(--color-gold-light);
+  font-size: 1.03rem;
   font-weight: 700;
   text-align: right;
 }
@@ -402,12 +418,12 @@
 
 .decade-chart text {
   fill: var(--color-text-secondary);
-  font-size: 11px;
+  font-size: 14px;
 }
 
-.chart-point-value {
-  fill: var(--color-gold-light);
-  font-size: 10px;
+.decade-chart text.chart-point-value {
+  fill: var(--color-text-secondary);
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -429,7 +445,7 @@
 
 .age-bar-value {
   color: var(--color-text-secondary);
-  font-size: 0.72rem;
+  font-size: 1.03rem;
   font-weight: 700;
 }
 
@@ -452,7 +468,7 @@
 
 .age-bar-label {
   color: var(--color-text-secondary);
-  font-size: 0.72rem;
+  font-size: 0.975rem;
 }
 
 .ranked-bars em {
@@ -465,7 +481,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--color-gold) 22%, transparent);
   color: var(--color-gold-light);
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-style: normal;
   font-weight: 800;
 }
@@ -480,7 +496,7 @@
   justify-content: space-between;
   gap: var(--space-4);
   color: var(--color-text-secondary);
-  font-size: 0.83rem;
+  font-size: 1.0625rem;
 }
 
 .ranked-bars li > div span {
@@ -533,7 +549,7 @@
   border-radius: 999px;
   color: var(--color-text-secondary);
   background: transparent;
-  font-size: 0.82rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -561,14 +577,14 @@
   flex-shrink: 0;
   color: var(--color-gold-light);
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 
 .did-you-know p {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: 1rem;
   line-height: 1.5;
 }
 
@@ -627,5 +643,268 @@
   .analytics-panel,
   .analytics-metric {
     padding: var(--space-4);
+  }
+}
+
+/* ============================================================
+   World-map geography explorer ("Where laureates come from")
+   ============================================================ */
+
+.geo-explorer {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* Suspense fallback shown while the map's lazy-loaded chunk downloads --
+   roughly matches the loaded section's typical height so swapping it in
+   doesn't create a large layout jump. */
+.geo-explorer-loading {
+  min-height: 22rem;
+  display: grid;
+  place-items: center;
+}
+
+.geo-explorer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.geo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
+
+.geo-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.geo-swatch {
+  display: inline-block;
+  width: 0.85rem;
+  aspect-ratio: 1;
+  border-radius: 0.2rem;
+}
+
+.geo-swatch--0,
+.geo-country--0 {
+  background: color-mix(in srgb, var(--color-surface-elevated) 65%, transparent);
+  fill: color-mix(in srgb, var(--color-surface-elevated) 65%, transparent);
+}
+
+.geo-swatch--1-4,
+.geo-country--1-4 {
+  background: color-mix(in srgb, var(--color-purple) 32%, var(--color-surface));
+  fill: color-mix(in srgb, var(--color-purple) 32%, var(--color-surface));
+}
+
+.geo-swatch--5-19,
+.geo-country--5-19 {
+  background: color-mix(in srgb, var(--color-purple) 65%, var(--color-surface));
+  fill: color-mix(in srgb, var(--color-purple) 65%, var(--color-surface));
+}
+
+.geo-swatch--20-49,
+.geo-country--20-49 {
+  background: color-mix(in srgb, var(--color-gold) 45%, var(--color-purple));
+  fill: color-mix(in srgb, var(--color-gold) 45%, var(--color-purple));
+}
+
+.geo-swatch--50-99,
+.geo-country--50-99 {
+  background: color-mix(in srgb, var(--color-gold) 78%, var(--color-purple));
+  fill: color-mix(in srgb, var(--color-gold) 78%, var(--color-purple));
+}
+
+.geo-swatch--100plus,
+.geo-country--100plus {
+  background: var(--color-gold-light);
+  fill: var(--color-gold-light);
+}
+
+.geo-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.geo-zoom-controls {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+}
+
+.geo-zoom-button {
+  display: grid;
+  width: 2rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 0;
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.geo-zoom-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.geo-zoom-button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-purple) 25%, var(--color-surface-elevated));
+}
+
+.geo-view-toggle {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  border-radius: var(--radius-small);
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-gold) 14%, var(--color-surface-elevated));
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.geo-view-toggle:hover {
+  border-color: var(--color-gold);
+}
+
+.geo-map-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-small);
+  background: color-mix(in srgb, var(--color-background-deep) 55%, transparent);
+}
+
+.geo-map-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Raised from 26rem: at the dashboard's max container width, the SVG's
+     own aspect ratio (900x430) needs ~35rem of natural auto-height to
+     render at full width. A lower cap forced the browser to shrink the
+     rendered map inside the element via preserveAspectRatio letterboxing,
+     which is what was leaving large empty margins on both sides even
+     though the <svg> element itself was already 100% width. */
+  max-height: 35rem;
+}
+
+.geo-country {
+  stroke: var(--color-background-deep);
+  stroke-width: 0.5;
+  outline: none;
+  transition: filter 120ms ease;
+}
+
+.geo-country:hover,
+.geo-country:focus-visible {
+  filter: brightness(1.25);
+  stroke: var(--color-gold-light);
+  stroke-width: 1.1;
+}
+
+.geo-tooltip {
+  /* left/top are computed in JS as exact, boundary-clamped pixel
+     coordinates (see GeographyExplorer.jsx), so no transform-based
+     offset is applied here -- that fixed "always above and centered"
+     offset was what let the tooltip get clipped near the map's edges. */
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  min-width: 10rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
+  border-radius: var(--radius-small);
+  background: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.geo-tooltip strong {
+  margin-bottom: 0.1rem;
+  color: var(--color-gold-light);
+}
+
+.geo-country-list {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 26rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.geo-country-list li {
+  display: grid;
+  grid-template-columns: 1.4rem auto 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 1.0625rem;
+}
+
+.geo-country-list-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-gold) 22%, transparent);
+  color: var(--color-gold-light);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.geo-country-list-name {
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geo-country-list-count {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.geo-country-list-share {
+  min-width: 3.5ch;
+  color: var(--color-gold-light);
+  font-weight: 700;
+  text-align: right;
+}
+
+@media (max-width: 42rem) {
+  .geo-legend {
+    font-size: 0.85rem;
+  }
+
+  .geo-map-wrap svg {
+    max-height: 18rem;
+  }
+
+  .geo-country-list li {
+    grid-template-columns: 1.2rem auto 1fr auto;
+    font-size: 0.95rem;
+  }
+
+  .geo-country-list-share {
+    display: none;
   }
 }
