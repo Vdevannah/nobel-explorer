@@ -4,6 +4,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { getContributionById, getContributionQuiz } from "../../services/api";
 import { getConnectionVisual, getContributionVisual } from "../../data/educationalVisuals";
 import { formatNameList } from "../../utils/nameList";
+import simpleCharacter from "../../assets/learning-levels/simple.png";
+import exploreCharacter from "../../assets/learning-levels/explore.png";
+import advancedCharacter from "../../assets/learning-levels/advanced.png";
+import expertCharacter from "../../assets/learning-levels/expert.png";
 import EducationalEmptyState from "./EducationalEmptyState";
 import EducationalVisual from "./EducationalVisual";
 
@@ -23,62 +27,11 @@ const educationSections = [
   { id: "quiz", label: "Quiz" },
 ];
 
-// One coherent line-icon family (shared viewBox/stroke settings) for the
-// four learning levels -- no icon library is installed, so these are
-// hand-drawn inline SVGs rather than a new dependency.
-const LEVEL_ICON_PROPS = {
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.8,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": "true",
-};
-
-function LightbulbIcon() {
-  return (
-    <svg {...LEVEL_ICON_PROPS}>
-      <path d="M9 18h6" />
-      <path d="M10 21.5h4" />
-      <path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.7.5 1.3 1.5 1.3 2.7h5c0-1.2.6-2.2 1.3-2.7A6.5 6.5 0 0 0 12 2.5Z" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg {...LEVEL_ICON_PROPS}>
-      <circle cx="11" cy="11" r="7" />
-      <line x1="21" y1="21" x2="16.2" y2="16.2" />
-    </svg>
-  );
-}
-
-function FlaskIcon() {
-  return (
-    <svg {...LEVEL_ICON_PROPS}>
-      <path d="M9.5 2h5" />
-      <path d="M10.5 2v6.8l-5.3 9.2a1.9 1.9 0 0 0 1.65 2.85h10.3a1.9 1.9 0 0 0 1.65-2.85l-5.3-9.2V2" />
-      <path d="M8.3 15h7.4" />
-    </svg>
-  );
-}
-
-function BookOpenIcon() {
-  return (
-    <svg {...LEVEL_ICON_PROPS}>
-      <path d="M12 6.2c-1.6-1.1-3.7-1.7-6.3-1.7v13.2c2.6 0 4.7.6 6.3 1.7c1.6-1.1 3.7-1.7 6.3-1.7V4.5c-2.6 0-4.7.6-6.3 1.7Z" />
-      <path d="M12 6.2v13.2" />
-    </svg>
-  );
-}
-
 const levelDetails = {
-  Simple: { audience: "Grades 4–6", style: "Everyday language, minimal math", Icon: LightbulbIcon },
-  Explore: { audience: "Grades 7–9", style: "Build vocabulary and understanding", Icon: SearchIcon },
-  Advanced: { audience: "Grades 10–12", style: "Equations and deeper reasoning", Icon: FlaskIcon },
-  Expert: { audience: "College+", style: "Technical detail and full context", Icon: BookOpenIcon },
+  Simple: { audience: "Grades 4–6", style: "Everyday language, minimal math", image: simpleCharacter },
+  Explore: { audience: "Grades 7–9", style: "Build vocabulary and understanding", image: exploreCharacter },
+  Advanced: { audience: "Grades 10–12", style: "Equations and deeper reasoning", image: advancedCharacter },
+  Expert: { audience: "College+", style: "Technical detail and full context", image: expertCharacter },
 };
 
 const contributionLabels = {
@@ -233,7 +186,6 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
       <div className="learning-tabs" role="tablist" aria-label="Explanation level">
         {levels.map((item) => {
           const available = explanations.some((explanationItem) => explanationItem.level === item);
-          const TabIcon = levelDetails[item].Icon;
           return (
             <button
               className={item === explanation.level ? "learning-tab learning-tab--active" : "learning-tab"}
@@ -244,7 +196,9 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
               onClick={() => onLevelChange(item)}
               key={item}
             >
-              <span className={`level-icon level-icon--${item.toLowerCase()}`}><TabIcon /></span>
+              <span className={`level-icon level-icon--${item.toLowerCase()}`}>
+                <img src={levelDetails[item].image} alt={`${item} learning level`} />
+              </span>
               <strong>{item}</strong>
               <span>{levelDetails[item].audience}</span>
               <small>{levelDetails[item].style}</small>

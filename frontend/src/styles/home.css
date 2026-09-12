@@ -682,6 +682,14 @@
   background: var(--color-surface-elevated);
 }
 
+.level-card-image {
+  height: 5.75rem;
+  width: auto;
+  max-width: 100%;
+  margin-bottom: var(--space-2);
+  object-fit: contain;
+}
+
 .level-card strong {
   font-size: 0.88rem;
 }
@@ -691,13 +699,11 @@
   font-size: 0.7rem;
 }
 
-.level-dot {
-  width: 0.5rem;
-  aspect-ratio: 1;
-  margin-bottom: var(--space-1);
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 0.8rem currentColor;
+.level-card-description {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.35;
 }
 
 .level-simple {
@@ -762,6 +768,10 @@
   .level-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .level-card-image {
+    height: 4.5rem;
+  }
 }
 
 @media (max-width: 36rem) {
@@ -816,6 +826,10 @@
 
   .level-grid {
     grid-template-columns: 1fr;
+  }
+
+  .level-card-image {
+    height: 4rem;
   }
 }
 

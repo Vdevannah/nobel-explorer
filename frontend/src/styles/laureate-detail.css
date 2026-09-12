@@ -1227,18 +1227,15 @@
 .learning-tab .level-icon {
   grid-row: 1 / 4;
   display: grid;
-  width: 3.5rem;
+  width: 4.5rem;
   aspect-ratio: 1;
   place-items: center;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0.15rem 0.5rem rgba(5, 4, 17, 0.3);
 }
-.learning-tab .level-icon svg { width: 1.875rem; height: 1.875rem; }
-.learning-tab .level-icon--simple,
-.learning-tab .level-icon--advanced { color: var(--color-gold); }
-.learning-tab .level-icon--explore { color: var(--color-purple); }
-.learning-tab .level-icon--expert { color: #ee77b1; }
+.learning-tab .level-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .learning-tab strong { font-size: 1.05rem; font-weight: 700; line-height: 1.18; }
 .learning-tab small { margin-top: 0.12rem; font-size: 0.55rem; line-height: 1.2; }
 
@@ -1526,10 +1523,9 @@
   .learning-tab .level-icon {
     grid-row: auto;
     justify-self: center;
-    width: 2.75rem;
+    width: 3.25rem;
     margin-bottom: 0.3rem;
   }
-  .learning-tab .level-icon svg { width: 1.5rem; height: 1.5rem; }
   .learning-tab strong { font-size: 0.92rem; }
   .learning-tab small { display: none; }
   .visual-learning { padding-inline: 0.4rem; }
