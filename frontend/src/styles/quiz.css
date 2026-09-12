@@ -14,9 +14,13 @@
   margin-bottom: var(--space-5);
 }
 
+.quiz-heading .eyebrow {
+  font-size: 1rem;
+}
+
 .quiz-heading h1 {
   margin-bottom: var(--space-2);
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-size: clamp(2.1rem, 3vw, 2.45rem);
   line-height: 1.1;
   letter-spacing: -0.035em;
 }
@@ -24,11 +28,19 @@
 .quiz-subtitle {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.92rem;
+  font-size: 1.225rem;
 }
 
 .quiz-setup-section {
   margin-bottom: var(--space-5);
+}
+
+.quiz-setup .learn-level-label {
+  font-size: 1.03rem;
+}
+
+.quiz-setup .learn-level-button {
+  font-size: 1.11rem;
 }
 
 .quiz-contribution-picker {
@@ -50,6 +62,11 @@
   text-align: left;
 }
 
+.quiz-contribution-option .learn-lesson-type {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .quiz-contribution-option--active {
   border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
   background: color-mix(in srgb, var(--color-gold) 12%, var(--color-surface-elevated));
@@ -63,13 +80,18 @@
   gap: 0.15rem;
 }
 
+.quiz-contribution-option-copy strong {
+  font-size: 1.34rem;
+}
+
 .quiz-contribution-option-copy small {
   color: var(--color-text-secondary);
-  font-size: 0.78rem;
+  font-size: 1.1rem;
 }
 
 .quiz-start-button {
   width: 100%;
+  font-size: 1.225rem;
 }
 
 .quiz-page .button:disabled {
@@ -83,10 +105,14 @@
   margin-bottom: var(--space-4);
 }
 
+.quiz-session-header .eyebrow {
+  font-size: 1.03rem;
+}
+
 .quiz-progress {
   margin: 0 0 var(--space-2);
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: 1.09rem;
   font-weight: 700;
 }
 
@@ -124,7 +150,7 @@
 
 .quiz-question-text {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.4rem;
   line-height: 1.35;
   letter-spacing: -0.01em;
 }
@@ -153,19 +179,19 @@
 
 .quiz-choice-letter {
   display: grid;
-  width: 1.7rem;
+  width: 1.85rem;
   aspect-ratio: 1;
   flex-shrink: 0;
   place-items: center;
   border: 1px solid var(--color-border);
   border-radius: 50%;
-  font-size: 0.78rem;
+  font-size: 1.03rem;
   font-weight: 750;
 }
 
 .quiz-choice-text {
   flex: 1;
-  font-size: 0.92rem;
+  font-size: 1.15rem;
 }
 
 .quiz-choice-mark {
@@ -204,6 +230,7 @@
 
 .quiz-submit-button {
   align-self: flex-start;
+  font-size: 1.15rem;
 }
 
 .quiz-feedback-error {
@@ -223,7 +250,7 @@
 
 .quiz-feedback-verdict {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 750;
 }
 
@@ -238,25 +265,26 @@
 .quiz-feedback-answer {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.85rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
 .quiz-feedback-explanation {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: 1.05rem;
   line-height: 1.45;
 }
 
 .quiz-next-button {
   align-self: flex-start;
   margin-top: var(--space-1);
+  font-size: 1.15rem;
 }
 
 .quiz-results h1 {
   margin-bottom: var(--space-3);
-  font-size: clamp(1.5rem, 2.8vw, 2rem);
+  font-size: clamp(2.1rem, 2.8vw, 2.4rem);
   letter-spacing: -0.03em;
 }
 
@@ -275,19 +303,19 @@
 .quiz-summary-topic {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.95rem;
+  font-size: 1.3rem;
   font-weight: 700;
 }
 
 .quiz-summary-level {
   margin: 0 0 var(--space-2);
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: 1.1rem;
 }
 
 .quiz-summary-score {
   margin: 0;
-  font-size: clamp(2rem, 5vw, 2.6rem);
+  font-size: clamp(2.4rem, 5vw, 2.9rem);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -295,14 +323,14 @@
 .quiz-summary-percentage {
   margin: 0;
   color: var(--color-gold-light);
-  font-size: 0.95rem;
+  font-size: 1.25rem;
   font-weight: 700;
 }
 
 .quiz-results-message {
   margin: 0 0 var(--space-4);
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: 1.2rem;
 }
 
 .quiz-results-actions {
@@ -310,6 +338,10 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin-bottom: var(--space-5);
+}
+
+.quiz-results-actions .button {
+  font-size: 1.11rem;
 }
 
 .quiz-review {
@@ -341,6 +373,7 @@
 
 .quiz-review-status {
   flex-shrink: 0;
+  font-size: 1.1rem;
   font-weight: 750;
 }
 
@@ -349,12 +382,15 @@
   min-width: 0;
   flex-direction: column;
   gap: 0.15rem;
-  font-size: 0.85rem;
+}
+
+.quiz-review-copy strong {
+  font-size: 1.175rem;
 }
 
 .quiz-review-copy small {
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
+  font-size: 1.08rem;
 }
 
 @media (max-width: 36rem) {
