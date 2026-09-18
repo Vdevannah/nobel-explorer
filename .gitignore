@@ -33,3 +33,7 @@ frontend/home-page-review.png
 frontend/photoelectric-simple-desktop-review.png
 frontend/polish-*.png
 frontend/relativity-*-lesson.png
+.env
+.env.docker
+# Docker database backups
+docker/mysql/*.sql

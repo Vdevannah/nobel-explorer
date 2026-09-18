@@ -1,0 +1,25 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Git
+.git/
+.gitignore
+
+# Secrets / environment files
+.env
+.env.*
+!.env.example
+
+# Frontend dependencies/build output
+frontend/node_modules/
+frontend/dist/
+
+# IDE / OS
+.vscode/
+.DS_Store
+
+# Logs
+*.log
