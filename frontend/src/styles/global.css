@@ -52,6 +52,12 @@ button {
   margin-inline: auto;
 }
 
+@media (min-width: 64.001rem) {
+  .container {
+    width: min(calc(100% - 3rem), var(--container-width));
+  }
+}
+
 h1,
 h2,
 h3,

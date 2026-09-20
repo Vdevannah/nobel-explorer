@@ -37,7 +37,31 @@
   --space-7: 3rem;
   --space-8: 4rem;
 
-  --container-width: 74rem;
-  --container-max-width: 74rem;
+  --container-width: 1320px;
+  --container-max-width: var(--container-width);
   --section-spacing: clamp(4.5rem, 9vw, 8rem);
+}
+
+/* Preserve the original dark palette above; light overrides only color tokens. */
+:root[data-theme="light"] {
+  --color-background: #f7f5fb;
+  --color-background-deep: #faf9fc;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f0ecf7;
+  --color-text-primary: #10132f;
+  --color-text-secondary: #454158;
+  --color-border: #9780ba;
+  --color-purple: #5922bd;
+  --color-purple-light: #4d199d;
+  --color-purple-glow: rgba(124, 77, 255, 0.08);
+  /* Rich gold fills and deeper gold text for contrast on pale surfaces. */
+  --color-gold: #c99a39;
+  --color-gold-light: #735014;
+  --color-focus: #5922bd;
+  --color-level-simple: #23744d;
+  --color-level-explore: #24669a;
+  --color-level-advanced: #7141ad;
+  --color-level-expert: #805b18;
+  --shadow-card: 0 0.5rem 1.75rem rgba(49, 30, 78, 0.14);
+  --shadow-glow: 0 0 2rem var(--color-purple-glow);
 }

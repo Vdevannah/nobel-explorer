@@ -6,8 +6,10 @@
     radial-gradient(circle at 92% 78%, color-mix(in srgb, var(--color-gold) 7%, transparent), transparent 25rem);
 }
 
-.quiz-page .container {
-  max-width: 40rem;
+@media (max-width: 64rem) {
+  .quiz-page .container {
+    max-width: 40rem;
+  }
 }
 
 .quiz-heading {

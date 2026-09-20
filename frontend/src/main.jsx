@@ -13,6 +13,7 @@ import "./styles/prizes.css";
 import "./styles/analytics.css";
 import "./styles/learn.css";
 import "./styles/quiz.css";
+import "./styles/theme.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

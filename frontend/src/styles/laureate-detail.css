@@ -1032,10 +1032,6 @@
 }
 
 /* Visual learning canvas */
-.detail-page.container {
-  width: min(calc(100% - 3rem), 85rem);
-}
-
 .educational-content {
   gap: 0.8rem;
   padding: 1.15rem;
@@ -1283,6 +1279,39 @@
   object-fit: contain;
 }
 
+/* These learning infographics retain their full canvas at every level. */
+.learning-layout.learning-layout--photoelectric,
+.learning-layout.learning-layout--relativity,
+.learning-layout.learning-layout--mrna,
+.learning-layout.learning-layout--click-infographic {
+  padding-inline: 0;
+  border: 0;
+  background: radial-gradient(ellipse at top, #03142b, transparent 80%);
+}
+
+.learning-layout--photoelectric .visual-learning,
+.learning-layout--relativity .visual-learning,
+.learning-layout--mrna .visual-learning,
+.learning-layout--click-infographic .visual-learning {
+  width: 100%;
+  max-width: 64rem;
+  margin-inline: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.learning-layout--photoelectric .educational-visual img,
+.learning-layout--relativity .educational-visual img,
+.learning-layout--mrna .educational-visual img,
+.learning-layout--click-infographic .educational-visual img {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+}
+
 .learning-copy {
   width: min(100%, 52rem);
   margin-inline: auto;
@@ -1500,11 +1529,11 @@
 .education-workspace .quiz-note { color: var(--color-text-secondary); }
 
 @media (max-width: 64rem) {
-  .detail-page.container { width: min(calc(100% - 2rem), 85rem); }
+  .detail-page.container { width: min(calc(100% - 2rem), var(--container-width)); }
 }
 
 @media (max-width: 42rem) {
-  .detail-page.container { width: min(calc(100% - 1rem), 85rem); }
+  .detail-page.container { width: min(calc(100% - 1rem), var(--container-width)); }
   .educational-content { padding: 0.65rem; }
   .education-section-tabs {
     grid-template-columns: repeat(5, minmax(5.5rem, 1fr));

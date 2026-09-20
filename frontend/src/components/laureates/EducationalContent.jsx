@@ -169,6 +169,10 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
   }
 
   const visual = getContributionVisual(contribution.title);
+  const isMrna = visual === getContributionVisual("Nucleoside Base Modifications and mRNA Vaccines");
+  const useClickInfographicStyle =
+    visual === getContributionVisual("Click Chemistry and Bioorthogonal Chemistry") &&
+    ["Simple", "Explore", "Advanced"].includes(explanation.level);
   const paragraphs = parseExplanationParagraphs(explanation.explanation_text);
   const visibleCount = DEFAULT_VISIBLE_PARAGRAPHS[explanation.level] ?? paragraphs.length;
   const canExpand = paragraphs.length > visibleCount;
@@ -206,7 +210,7 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
           );
         })}
       </div>
-      <div className={`learning-layout learning-layout--${explanation.level.toLowerCase()}`} role="tabpanel">
+      <div className={`learning-layout learning-layout--${explanation.level.toLowerCase()}${visual === getContributionVisual("Photoelectric Effect") ? " learning-layout--photoelectric" : visual === getContributionVisual("General Relativity") ? " learning-layout--relativity" : isMrna ? " learning-layout--mrna" : useClickInfographicStyle ? " learning-layout--click-infographic" : ""}`} role="tabpanel">
         <div className={`visual-learning visual-learning--${explanation.level.toLowerCase()}`}>
           <EducationalVisual visual={visual} level={explanation.level} />
         </div>

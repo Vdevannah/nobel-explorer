@@ -7,20 +7,20 @@ import photoelectricAdvancedImage from "../assets/education/photoelectric-advanc
 import photoelectricExpertImage from "../assets/education/photoelectric-expert.png";
 import photoelectricExploreImage from "../assets/education/photoelectric-explore.png";
 import photoelectricSimpleImage from "../assets/education/photoelectric-simple.png";
-import relativityAdvancedImage from "../assets/education/relativity-advanced.png";
-import relativityExpertImage from "../assets/education/relativity-expert.png";
-import relativityExploreImage from "../assets/education/relativity-explore.png";
-import relativitySimpleImage from "../assets/education/relativity-simple.png";
-import mrnaAdvancedImage from "../assets/education/mrna-advanced.png";
-import mrnaExpertImage from "../assets/education/mrna-expert.png";
-import mrnaExploreImage from "../assets/education/mrna-explore.png";
-import mrnaSimpleImage from "../assets/education/mrna-simple.png";
+import relativityAdvancedImage from "../assets/education/relativity_advanced.png";
+import relativityExpertImage from "../assets/education/relativity_expert.png";
+import relativityExploreImage from "../assets/education/relativity_explore.png";
+import relativitySimpleImage from "../assets/education/relativity_simple.png";
+import mrnaAdvancedImage from "../assets/education/mrna_advanced.png";
+import mrnaExpertImage from "../assets/education/mrna_expert.png";
+import mrnaExploreImage from "../assets/education/mrna_explore.png";
+import mrnaSimpleImage from "../assets/education/mrna_simple.png";
 import mrnaVaccinesApplicationImage from "../assets/education/mrna-vaccines-application.png";
 import mrnaFutureMedicinesApplicationImage from "../assets/education/mrna-future-medicines-application.png";
 import mrnaRnaSensingApplicationImage from "../assets/education/mrna-rna-sensing-application.png";
-import clickSimpleImage from "../assets/education/click-simple.png";
-import clickExploreImage from "../assets/education/click-explore.png";
-import clickAdvancedImage from "../assets/education/click-advanced.png";
+import clickSimpleImage from "../assets/education/click_chemistry_simple.png";
+import clickExploreImage from "../assets/education/click_chemistry_explore.png";
+import clickAdvancedImage from "../assets/education/click_chemistry_advanced.png";
 import clickExpertImage from "../assets/education/click-expert.png";
 import clickVisualizingBiomoleculesImage from "../assets/education/click-visualizing-biomolecules.png";
 import clickMedicinesMaterialsImage from "../assets/education/click-medicines-materials.png";
@@ -60,7 +60,7 @@ export const contributionVisuals = {
       Expert: relativityExpertImage,
     },
     alt: "Light following a curved path near a massive star in curved spacetime",
-    caption: "Mass and energy curve spacetime, changing the paths of matter and light.",
+    caption: null,
     levelCues: {
       Simple: ["matter and energy", "curved spacetime", "changed paths"],
       Explore: ["mass-energy", "light bending", "free fall"],
