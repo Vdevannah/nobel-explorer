@@ -1,12 +1,28 @@
+![Nobel Explorer](docs/images/nobel-explorer-home.png)
+
 # Nobel Explorer
 
-Nobel Explorer is an educational application for exploring Nobel Prize data. It
-includes a FastAPI REST API, a MySQL database accessed through SQLAlchemy, and an
-ETL pipeline that imports raw Laureate data from the official Nobel Prize API.
-The API exposes Laureates, Prizes, award-time institutional affiliations, and
-analytics-ready Nobel data.
+Nobel Explorer is an interactive educational platform for exploring Nobel Prize
+laureates, discoveries, and their real-world scientific impact.
 
-## Current status
+**Live application:** [nobel-explorer.up.railway.app](https://nobel-explorer.up.railway.app)
+
+**GitHub repository:** [Vdevannah/nobel-explorer](https://github.com/Vdevannah/nobel-explorer)
+
+Explore Nobel Prize categories and laureates, search and browse laureate
+profiles, learn Nobel-winning science through multiple learning levels, explore
+interactive analytics and visualizations, and test your knowledge with the
+Nobel Prize quiz.
+
+## Deployment architecture
+
+The deployed application uses a three-tier architecture:
+
+**React/Vite frontend → FastAPI backend → MySQL database**
+
+The application is containerized with Docker and deployed on Railway.
+
+## Backend and data capabilities
 
 The database, ETL pipeline, repository layer, service layer, and read-only REST
 API are implemented. Current capabilities include:
