@@ -1323,14 +1323,52 @@
   box-shadow: inset 0 1px color-mix(in srgb, var(--color-purple-light) 8%, transparent);
   padding: clamp(0.9rem, 1.5vw, 1.15rem);
 }
+.learning-copy-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
 .learning-copy h3 {
-  margin: 0 0 0.5rem;
+  margin: 0;
   color: var(--color-gold-light);
   font-family: var(--font-heading);
   font-size: clamp(1.25rem, 2vw, 1.5rem);
   letter-spacing: 0;
   text-transform: none;
 }
+.learning-speech-controls { flex: 0 0 auto; }
+.learning-speech-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.25rem 0.4rem;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--lesson-accent);
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.15rem;
+  cursor: pointer;
+}
+.learning-speech-button svg {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+}
+.learning-speech-button .learning-speech-speaker-icon {
+  width: 21px;
+  height: 21px;
+}
+.learning-speech-button:hover:not(:disabled) { opacity: 0.82; }
+.learning-speech-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.learning-speech-button:disabled { cursor: not-allowed; opacity: 0.55; }
 .learning-copy p {
   margin: 0 0 0.75rem;
   color: var(--color-text-primary);

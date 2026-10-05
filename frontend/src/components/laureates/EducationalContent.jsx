@@ -10,8 +10,23 @@ import advancedCharacter from "../../assets/learning-levels/advanced.png";
 import expertCharacter from "../../assets/learning-levels/expert.png";
 import EducationalEmptyState from "./EducationalEmptyState";
 import EducationalVisual from "./EducationalVisual";
+import SpeechControls from "./SpeechControls";
 
 const levels = ["Simple", "Explore", "Advanced", "Expert"];
+const PRERECORDED_AUDIO_BY_CONTRIBUTION_ID = {
+  38: {
+    Simple: "/audio/einstein/einstein-simple.mp3",
+    Explore: "/audio/einstein/einstein-explore.mp3",
+    Advanced: "/audio/einstein/einstein-advanced.mp3",
+    Expert: "/audio/einstein/einstein-expert.mp3",
+  },
+  39: {
+    Simple: "/audio/einstein/einstein-gravity-simple.mp3",
+    Explore: "/audio/einstein/einstein-gravity-explore.mp3",
+    Advanced: "/audio/einstein/einstein-gravity-advanced.mp3",
+    Expert: "/audio/einstein/einstein-gravity-expert.mp3",
+  },
+};
 
 // How many stored paragraphs are visible by default under the educational
 // image before the reader opts into "Read full explanation" -- the full text
@@ -177,6 +192,9 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
   const visibleCount = DEFAULT_VISIBLE_PARAGRAPHS[explanation.level] ?? paragraphs.length;
   const canExpand = paragraphs.length > visibleCount;
   const visibleParagraphs = isExplanationExpanded ? paragraphs : paragraphs.slice(0, visibleCount);
+  const speechText = visibleParagraphs.join("\n\n");
+  const speechResetKey = `${contribution.contribution_id}:${explanation.level}`;
+  const audioSrc = PRERECORDED_AUDIO_BY_CONTRIBUTION_ID[contribution.contribution_id]?.[explanation.level];
 
   return (
     <section className="learning-panel" id="learn" aria-labelledby="learn-title">
@@ -215,7 +233,10 @@ function LearningSection({ contribution, explanations, level, onLevelChange }) {
           <EducationalVisual visual={visual} level={explanation.level} />
         </div>
         <div className="learning-copy">
-          <h3>How it works</h3>
+          <div className="learning-copy-heading">
+            <h3>How it works</h3>
+            <SpeechControls text={speechText} resetKey={speechResetKey} audioSrc={audioSrc} />
+          </div>
           {visibleParagraphs.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
