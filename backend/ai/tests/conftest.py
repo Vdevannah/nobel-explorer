@@ -165,3 +165,78 @@ def index_config(tmp_path):
     from backend.ai.config import IndexConfig
 
     return IndexConfig(persist_dir=tmp_path / "chroma", collection_name="test_nobel")
+
+
+# --------------------------------------------------------------------------
+# Phase 2 tool fixtures (isolated SQLite database, read-only after seeding)
+# --------------------------------------------------------------------------
+
+def _sqlite_mysql_compat(dbapi_connection, _record):
+    """Register MySQL functions used by the analytics repository."""
+    import math
+
+    dbapi_connection.create_function("year", 1, lambda value: int(str(value)[:4]) if value else None)
+    dbapi_connection.create_function("floor", 1, lambda value: math.floor(value) if value is not None else None)
+
+
+@pytest.fixture()
+def tool_engine():
+    from sqlalchemy import event
+    from sqlalchemy.pool import StaticPool
+
+    from backend.ai.tests.tool_fixture_data import seed_tool_fixture
+
+    engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+    event.listen(engine, "connect", _sqlite_mysql_compat)
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        seed_tool_fixture(session)
+    with engine.connect() as connection:
+        connection.exec_driver_sql("PRAGMA query_only = ON")  # tools must work without write access
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture()
+def tool_session_factory(tool_engine):
+    from contextlib import contextmanager
+
+    @contextmanager
+    def factory():
+        session = Session(bind=tool_engine)
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+
+    return factory
+
+
+@pytest.fixture()
+def tool_store(tool_session_factory, hashing_embedder, tmp_path):
+    from backend.ai.chunking import chunk_documents
+    from backend.ai.config import IndexConfig
+    from backend.ai.documents import build_all_documents
+    from backend.ai.vector_store import NobelVectorStore
+
+    with tool_session_factory() as db:
+        documents = build_all_documents(db)
+    store = NobelVectorStore(hashing_embedder, IndexConfig(persist_dir=tmp_path / "tool_index",
+                                                           collection_name="tool_test"))
+    store.sync(chunk_documents(documents, hashing_embedder.count_tokens))
+    return store
+
+
+@pytest.fixture()
+def tool_context(tool_session_factory, tool_store):
+    from backend.ai.tools.context import ToolContext
+
+    return ToolContext(session_factory=tool_session_factory, store_provider=lambda: tool_store)
+
+
+@pytest.fixture()
+def tools(tool_context):
+    from backend.ai.tools.registry import get_tool_registry
+
+    return get_tool_registry(tool_context)

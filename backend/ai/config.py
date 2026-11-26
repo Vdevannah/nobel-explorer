@@ -94,8 +94,22 @@ class IndexConfig:
     distance_space: str = "cosine"
 
 
+def _env_float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    return float(value) if value not in (None, "") else default
+
+
 @dataclass(frozen=True)
 class RetrievalConfig:
     default_k: int = 5
     max_k: int = 10
     max_query_chars: int = 500
+    # Document de-duplication over-fetches candidate chunks so that k distinct
+    # documents can usually be returned: candidates = max(k, min(k * factor, cap)).
+    dedupe_overfetch_factor: int = 4
+    dedupe_max_candidates: int = 40
+    # PROVISIONAL weak-match threshold on cosine similarity. Chosen from a
+    # 22 + 6 question sample in Phase 1; it is NOT a calibrated confidence.
+    weak_match_threshold: float = field(
+        default_factory=lambda: _env_float("AI_WEAK_MATCH_THRESHOLD", 0.40)
+    )

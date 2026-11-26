@@ -71,7 +71,7 @@ def _percentile(values: list[float], pct: float) -> float:
     return ordered[index]
 
 
-def evaluate(store=None, dataset_path: Path = DATASET) -> dict:
+def evaluate(store=None, dataset_path: Path = DATASET, dedupe_by_document: bool = False) -> dict:
     dataset = json.loads(dataset_path.read_text(encoding="utf-8"))
     if store is None:
         from backend.ai.retrieval import get_default_store
@@ -89,7 +89,8 @@ def evaluate(store=None, dataset_path: Path = DATASET) -> dict:
     latencies = []
     for item in dataset["in_scope"]:
         started = time.perf_counter()
-        response = search_nobel_knowledge(item["query"], level=item.get("level"), k=RETRIEVE_K, store=store)
+        response = search_nobel_knowledge(item["query"], level=item.get("level"), k=RETRIEVE_K, store=store,
+                                          dedupe_by_document=dedupe_by_document)
         latency_ms = (time.perf_counter() - started) * 1000
         latencies.append(latency_ms)
 
@@ -116,7 +117,7 @@ def evaluate(store=None, dataset_path: Path = DATASET) -> dict:
     oos = []
     for item in dataset["out_of_scope"]:
         started = time.perf_counter()
-        response = search_nobel_knowledge(item["query"], k=3, store=store)
+        response = search_nobel_knowledge(item["query"], k=3, store=store, dedupe_by_document=dedupe_by_document)
         latencies.append((time.perf_counter() - started) * 1000)
         oos.append({
             "id": item["id"],
@@ -138,6 +139,7 @@ def evaluate(store=None, dataset_path: Path = DATASET) -> dict:
 
     return {
         "dataset_version": dataset["version"],
+        "dedupe_by_document": dedupe_by_document,
         "retrieve_k": RETRIEVE_K,
         "in_scope_questions": n,
         "out_of_scope_questions": len(oos),
@@ -175,15 +177,50 @@ def evaluate(store=None, dataset_path: Path = DATASET) -> dict:
     }
 
 
+def compare_dedupe(store=None, dataset_path: Path = DATASET) -> dict:
+    """Run the same questions with and without document de-duplication."""
+    if store is None:
+        from backend.ai.retrieval import get_default_store
+        store = get_default_store()
+    baseline = evaluate(store, dataset_path, dedupe_by_document=False)
+    deduped = evaluate(store, dataset_path, dedupe_by_document=True)
+    per_question = []
+    for b, d in zip(baseline["per_question"], deduped["per_question"]):
+        per_question.append({
+            "id": b["id"],
+            "query": b["query"],
+            "hit_at_3": [b["hit_at_3"], d["hit_at_3"]],
+            "recall_at_5": [b["recall_at_5"], d["recall_at_5"]],
+            "reciprocal_rank": [b["reciprocal_rank"], d["reciprocal_rank"]],
+            "changed": (b["hit_at_3"], b["recall_at_5"], b["reciprocal_rank"])
+                       != (d["hit_at_3"], d["recall_at_5"], d["reciprocal_rank"]),
+        })
+    return {
+        "baseline": {k: baseline[k] for k in ("metrics", "metrics_by_topic", "latency_ms")},
+        "deduplicated": {k: deduped[k] for k in ("metrics", "metrics_by_topic", "latency_ms")},
+        "questions_changed": sum(q["changed"] for q in per_question),
+        "per_question": per_question,
+        "baseline_full": baseline,
+        "deduplicated_full": deduped,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the retrieval evaluation")
     parser.add_argument("--output", type=Path, default=None, help="write full JSON results here")
+    parser.add_argument("--dedupe", action="store_true", help="evaluate with document de-duplication")
+    parser.add_argument("--compare-dedupe", action="store_true", help="compare baseline vs de-duplicated")
     args = parser.parse_args(argv)
-    results = evaluate()
+    if args.compare_dedupe:
+        results = compare_dedupe()
+        summary = {k: results[k] for k in ("baseline", "deduplicated", "questions_changed")}
+    else:
+        results = evaluate(dedupe_by_document=args.dedupe)
+        summary = {k: results[k] for k in ("metrics", "metrics_by_topic", "latency_ms", "similarity_separation")}
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({k: results[k] for k in ("metrics", "metrics_by_topic", "latency_ms", "similarity_separation")}, indent=2))
+    print(json.dumps(summary, indent=2))
     return 0
 
 

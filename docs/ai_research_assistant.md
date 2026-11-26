@@ -1,4 +1,4 @@
-# AI Research Assistant — Phase 1: Retrieval Foundation
+# AI Research Assistant — Retrieval Foundation (Phase 1) and Tools (Phase 2)
 
 ## Status: what exists and what does not
 
@@ -8,16 +8,18 @@
 | Token-aware chunking for `all-MiniLM-L6-v2` | **Implemented (Phase 1)** |
 | Local embeddings (Sentence Transformers, CPU, no paid API) | **Implemented (Phase 1)** |
 | Persistent ChromaDB index with idempotent sync | **Implemented (Phase 1)** |
-| `search_nobel_knowledge()` semantic retrieval with filters | **Implemented (Phase 1)** — a Python function, not yet an HTTP endpoint |
+| `search_nobel_knowledge()` semantic retrieval with filters | **Implemented (Phase 1)** |
 | Retrieval evaluation (Hit@3, Recall@5, MRR@10, latency) | **Implemented (Phase 1)** |
-| LangChain tools (`search_laureates`, `get_laureate_details`, `get_nobel_statistics`) | Planned (Phase 2) |
-| LLM answer generation / OpenAI tool calling / agent | Planned (Phase 2–3) — **no LLM calls exist yet** |
+| Optional document de-duplication and provisional weak-match flag | **Implemented (Phase 2)** — retrieval defaults unchanged |
+| Four validated, read-only LangChain tools (`search_laureates`, `get_laureate_details`, `get_nobel_statistics`, `search_nobel_knowledge`) | **Implemented (Phase 2)** — directly invocable, no LLM |
+| Scripted tool evaluation (30 cases) | **Implemented (Phase 2)** — measures tool correctness, *not* LLM tool selection |
+| LLM answer generation / OpenAI tool calling / autonomous agent | Planned (Phase 3) — **no LLM is instantiated and no LLM calls exist yet** |
 | `/ai/chat` API endpoint and frontend assistant page | Planned (Phase 3–4) |
 | Docker / Railway deployment of the AI stack | Planned (Phase 5) — Dockerfiles are unchanged |
 
-Phase 1 does not change existing routes, frontend, Dockerfiles or database
-schema. LangChain and OpenAI packages are installed in `requirements-ai.txt`
-for later phases but are not imported by Phase 1 code.
+Phases 1–2 do not change existing routes, frontend, Dockerfiles or database
+schema. `langchain-core` is used only for tool definitions; the OpenAI
+packages in `requirements-ai.txt` are not imported.
 
 ## Architecture
 
@@ -161,28 +163,145 @@ p50 8–9 ms; p95 11–15 ms across runs.
 ### Known retrieval failures
 
 1. **Year + category questions** — "Who won the 2022 Nobel Prize in
-   Chemistry?" retrieved no relevant document in the top 10. The embedding
-   model does not represent years/categories precisely. → Phase 2
-   `search_laureates` (SQL filters) must handle these.
-2. **Duplicate chunks** — multi-chunk documents (e.g. `explanation:38:expert`)
-   can occupy several top-5 slots, lowering Recall@5. → Optional per-document
-   de-duplication.
+   Chemistry?" retrieves no relevant document in the top 10 *semantically*.
+   **Resolved in Phase 2 by the structured `search_laureates` tool**, which
+   returns Carolyn R. Bertozzi, K. Barry Sharpless and Morten Meldal from SQL.
+2. **Duplicate chunks** — multi-chunk documents can occupy several top-5
+   slots. **Phase 2 adds optional per-document de-duplication** (Recall@5
+   0.7712 → 0.8167; see below).
 3. **Applications outrank definitions** — for "What is click chemistry?" and
-   "What is the photoelectric effect?", connection/application documents rank
-   above the core explanation.
-4. **Out-of-scope detection** — 5 of 6 out-of-scope questions had top-1
-   similarity 0.12–0.33 (in-scope minimum 0.49), but "Who won the Nobel
-   Prize in Mathematics in 1950?" scored **0.66**. A similarity threshold
-   (0.35–0.45 separated this small sample) cannot catch Nobel-sounding but
-   unanswerable questions; the agent must reason about them.
+   "What is the photoelectric effect?", application documents still rank
+   above the core explanation (unchanged by de-duplication).
+4. **Out-of-scope detection** — "Who won the Nobel Prize in Mathematics in
+   1950?" scores **0.66** and is *not* flagged weak. Only structured
+   validation catches it (`search_laureates` rejects the category).
+
+## Phase 2: tool layer (`backend/ai/tools/`)
+
+```
+LLM (Phase 3, not built) ──► LangChain StructuredTool (name, description, args_schema)
+                                   │  Pydantic validation (schemas.py) ─► error envelope on failure
+                                   ▼
+                    run_safely (results.py): JSON envelope, safe errors, no tracebacks
+                 ┌─────────────────┼──────────────────────┬─────────────────────────┐
+     search_laureates     get_laureate_details    get_nobel_statistics     search_nobel_knowledge
+     (structured.py)      (structured.py)         (statistics.py)          (semantic.py)
+     laureate_service     laureate/contribution/  analytics_service +      Phase 1 retrieval
+                          explanation/connection  analytics_repository     (Chroma, MiniLM)
+                          services
+                 └──────── read-only session (ToolContext → Phase 1 read_only_session) ─┘
+```
+
+| Module | Responsibility |
+|---|---|
+| `schemas.py` | Pydantic input models: categories (6, with aliases), years 1901–current, bounded limits, country/gender normalisation, LIKE-wildcard rejection, per-operation filter rules, `extra="forbid"` |
+| `structured.py` | `search_laureates`, `get_laureate_details` over existing services; matched vs other awards; birth vs affiliation country; honest empty results |
+| `statistics.py` | `get_nobel_statistics`: 9 allow-listed operations, each with metric definition and counting unit |
+| `semantic.py` | Compact wrapper over `search_nobel_knowledge` (dedupe on by default for the tool) |
+| `results.py` | `{"tool", "ok", "data"}` / `{"tool", "ok": false, "error": {"type", "message"}}` envelopes; credential-safe error translation; JSON round-trip |
+| `context.py` | `ToolContext` (session factory + index provider); refuses to create an index on read |
+| `langchain_tools.py` | `StructuredTool.from_function` definitions with explicit `args_schema` and `handle_validation_error` |
+| `registry.py` | Exactly four tools, in a fixed order |
+
+### The four tools
+
+| Tool | Use when | Arguments (required in bold) |
+|---|---|---|
+| `search_laureates` | Exact "who won" lookups; obtaining `laureate_id`s | `name`, `year`, `category`, `birth_country`, `gender`, `limit` (≥1 filter) |
+| `get_laureate_details` | One known laureate: awards, motivations, affiliations, educational content | **`laureate_id`**, `include_explanation_level` |
+| `get_nobel_statistics` | "How many" / trend questions | **`operation`**, `category`, `start_year`, `end_year`, `affiliation_country`, `limit` |
+| `search_nobel_knowledge` | "Explain / how / why" questions | **`query`**, `level`, `laureate_id`, `k`, `dedupe_by_document` |
+
+Statistics operations and counting units: `summary` (distinct laureates,
+laureate-prize awards, persons vs organizations, prizes, birth countries,
+women %), `laureates_by_category` (distinct laureates), `laureates_by_gender`
+(distinct persons), `prizes_by_decade` (prizes), `laureates_by_decade`
+(distinct laureates), `top_birth_countries` (distinct persons, ties
+alphabetical), `women_by_era` (distinct known-gender persons),
+`average_age_at_award` (age observations), `laureates_by_affiliation_institution`
+(distinct laureates, by *institution* country). In the live database:
+1,018 distinct laureates (990 persons, 28 organizations), 1,026 awards and 633 prizes.
+
+### De-duplication benchmark (same 22 questions)
+
+| | Hit@3 | Recall@5 | MRR@10 |
+|---|---|---|---|
+| Baseline (default, unchanged) | 0.9545 | 0.7712 | 0.8106 |
+| `dedupe_by_document=True` | 0.9545 | **0.8167** | 0.8106 |
+
+4 questions improved Recall@5 (pe-1 0.2→0.4, gr-1 0.8→1.0, mrna-1 0.4→0.8,
+mrna-2 0.6→0.8); 18 unchanged; none got worse on any metric. With
+de-duplication, the top-5 holds five *distinct* documents, so Recall@5
+measures document coverage rather than chunk repetition; the trade-off is
+that other relevant chunks of the same document are hidden. Latency was
+within run-to-run noise (mean ≈8–12 ms either way). All values were
+recomputed independently from the saved per-question results.
+
+**When can de-duplication not lower Hit@3, Recall@5 or MRR@10?** The
+de-duplicated list is the *first occurrence of each document* in a candidate
+list of `max(k, min(4k, 40))` chunks. Every document's rank can then only
+stay the same or improve, so document-level metrics cannot decrease,
+**provided that**:
+
+1. **Same candidate ordering** — the first k chunks of the larger
+   (over-fetched) query equal the baseline top-k. Approximate (HNSW) search
+   could break this if `n_results` exceeded `ef_search` (100 here; we fetch
+   ≤ 40) or with exact distance ties. Verified empirically on all 28
+   evaluation queries: 28/28 prefix-consistent, 0 ties.
+2. **At least k candidates** — guaranteed by `max(k, …)`. A configured cap
+   below k would otherwise shrink the pool (fixed during the Phase 2 review;
+   regression-tested).
+3. **Same filters and index** in both runs (the evaluation uses identical
+   `level` filters and the same collection).
+4. **Relevance at document level or coarser** (document, contribution).
+   With **chunk-level** relevance, de-duplication *can* lower recall by
+   hiding a relevant second chunk of an already-listed document.
+5. `min_similarity` does not break it: a document whose best chunk is below
+   the threshold has all of its chunks below it.
+
+### Weak-evidence indicator (provisional threshold 0.40, not calibrated)
+
+| Query | Top similarity | `all_results_weak` |
+|---|---|---|
+| Explain the photoelectric effect simply | 0.738 | false |
+| "photoelectric effect" + level Expert + Karikó (incompatible filters) | −0.075 | **true** |
+| Sourdough recipe | 0.188 | **true** |
+| 2022 FIFA World Cup | 0.333 | **true** |
+| Bitcoin price | 0.125 | **true** |
+| **Nobel Prize in Mathematics 1950 (false premise)** | **0.660** | **false** |
+
+Results are flagged, never discarded. The false premise shows why the
+flag is not enough: structured validation (`search_laureates` rejects
+"Mathematics") and evidence inspection remain necessary.
+
+### Scripted tool evaluation
+
+`backend/ai/evaluation/tool_eval_set.json`: 30 cases (exact structured 6,
+details 3, statistics 6, semantic 4, multi-step 3, ambiguous 2, false
+premise 2, unsupported category 1, out-of-scope 3). Expected values were
+derived with independent raw SQL before running the tools. The runner
+invokes the **expected** tools directly: **30/30 passed**. This verifies
+tool correctness only; it is **not** LLM tool-selection accuracy (Phase 3).
+
+### Phase 2 review corrections
+
+| Issue | Fix | Regression test |
+|---|---|---|
+| `default_store_provider(config)` checked a custom index directory but then returned the cached **default** store | Build the store from the checked config | `test_custom_index_config_is_actually_used` |
+| A de-duplication cap configured below `k` could shrink the candidate pool under the baseline | Candidates = `max(k, min(4k, 40))` | `test_dedupe_never_fetches_fewer_candidates_than_k` |
+| Tool JSON schemas emitted non-standard `ge`/`le` | `Field(...)` before `BeforeValidator` | `test_schemas_use_standard_json_schema_bounds` |
+| `get_laureate_details` description lacked *when* to use it | Description rewritten | `test_tool_schema_and_description` |
+| Importing `tools.schemas` required LangChain | Lazy package exports | base-`.venv` test run |
+| Hard-coded level order in `structured.py` | Uses `EDUCATIONAL_LEVELS` | existing details tests |
 
 ## Tests
 
 | Suite | Command | Result |
 |---|---|---|
-| AI unit tests (SQLite fixtures, `HashingEmbedder` — **not** semantic validation) | `pytest backend/ai/tests` | 80 passed, 9 skipped (gated) |
-| Real model + live DB integration | `AI_RUN_REAL_MODEL_TESTS=1 AI_RUN_LIVE_DB_TESTS=1 pytest backend/ai/tests -m "real_model or live_db"` | 9 passed |
+| AI unit tests (SQLite fixtures, `HashingEmbedder` — **not** semantic validation) | `pytest backend/ai/tests` | **243 passed**, 16 skipped (gated) — 80 Phase 1 + 163 Phase 2 |
+| Real model + live DB integration | `AI_RUN_REAL_MODEL_TESTS=1 AI_RUN_LIVE_DB_TESTS=1 pytest backend/ai/tests -m "real_model or live_db"` | **16 passed** (9 Phase 1 + 7 Phase 2): 6 real-model, 9 live read-only DB, 1 both |
 | Existing backend/ETL suite (isolated restored DB `nobel_explorer_ai_test`) | `pytest backend ETL --ignore=backend/ai` | 297 passed in both `.venv` and `.venv-ai` |
+| AI tests in the base `.venv` (no AI packages) | `pytest backend/ai` | schema and Phase 1 tests run; AI-dependent tests skip cleanly |
 
 ## Reproduce
 
@@ -202,17 +321,26 @@ export DB_HOST=127.0.0.1 DB_PORT=9303 TOKENIZERS_PARALLELISM=false
 .venv-ai/bin/python -m backend.ai.build_index             # idempotent sync
 .venv-ai/bin/python -m backend.ai.build_index --rebuild   # drop and recreate
 
-# 4. Evaluate retrieval
+# 4. Evaluate retrieval (baseline, and baseline vs de-duplicated)
 .venv-ai/bin/python -m backend.ai.evaluation.run_retrieval_eval --output ai_index/eval_results.json
+.venv-ai/bin/python -m backend.ai.evaluation.run_retrieval_eval --compare-dedupe --output ai_index/dedupe_comparison.json
 
-# 5. Tests
+# 5. Scripted tool evaluation
+.venv-ai/bin/python -m backend.ai.evaluation.run_tool_eval --output ai_index/tool_eval_results.json
+
+# 6. Use a tool directly (no LLM)
+.venv-ai/bin/python -c "from backend.ai.tools import get_tool_registry; \
+print(get_tool_registry()['search_laureates'].invoke({'year': 2022, 'category': 'Chemistry'}))"
+
+# 7. Tests
 .venv-ai/bin/python -m pytest backend/ai/tests -q
 AI_RUN_REAL_MODEL_TESTS=1 AI_RUN_LIVE_DB_TESTS=1 \
   .venv-ai/bin/python -m pytest backend/ai/tests -q -m "real_model or live_db"
 ```
 
 Generated files (`ai_index/`), environments (`.venv-*/`) and model caches are
-git-ignored. The model downloads (≈92 MB) to the Hugging Face cache on first use.
+git-ignored. The model downloads (≈92 MB) to the Hugging Face cache on first use;
+the first knowledge-tool call in a process loads it (≈4–5 s), later calls take ~10–25 ms.
 
 ## Limitations
 
@@ -223,8 +351,16 @@ git-ignored. The model downloads (≈92 MB) to the Hugging Face cache on first u
   mid-sentence (each still carries its title header).
 * Content-hash sync must be run with the full corpus (partial input deletes
   missing chunks by design).
+* Country filters match stored Nobel API names ("USA", "the Netherlands");
+  only a few unambiguous aliases are mapped, and historical names
+  (e.g. "Russian Empire" for Marie Curie) are not mapped to modern countries.
+* Name search is a substring match; accent-insensitivity depends on the
+  MySQL collation (true for the current `utf8mb4_0900_ai_ci`).
+* The weak-match threshold (0.40) is provisional and uncalibrated.
+* Each tool call opens a short-lived read-only engine (NullPool); fine for an
+  assistant, not tuned for high request rates.
 * The local Homebrew MySQL on port 3306 rejects the `.env` credentials
-  (error 1045); Phase 1 used the compose database on port 9303.
+  (error 1045); development used the compose database on port 9303.
 
 ## Deployment considerations (not yet applied)
 
@@ -234,5 +370,5 @@ git-ignored. The model downloads (≈92 MB) to the Hugging Face cache on first u
 * ≈1 GB peak memory while embedding — check the Railway plan.
 * Railway's filesystem is ephemeral: rebuild the index at startup (~10 s) or
   mount a volume.
-* Use a dedicated SELECT-only MySQL user for AI access.
+* Use a dedicated SELECT-only MySQL user for AI access (tools already run in READ ONLY sessions).
 * Keep Chroma telemetry disabled (already set in code).
