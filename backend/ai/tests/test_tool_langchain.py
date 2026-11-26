@@ -109,8 +109,17 @@ def test_plain_functions_work_without_langchain_invoke(tool_context):
 
 
 def test_no_chat_model_or_agent_is_loaded(tools):
-    for module in ("langchain_openai", "openai"):
-        assert module not in sys.modules, f"{module} should not be imported by the tool layer"
+    # Checked in a fresh interpreter: other tests in the same session (Phase 3)
+    # legitimately import openai, which made an in-process sys.modules check
+    # order-dependent.
+    import subprocess
+
+    code = ("import sys; from backend.ai.tools.registry import get_tool_registry; get_tool_registry(); "
+            "bad = [m for m in ('langchain_openai', 'openai', 'langchain.agents') if m in sys.modules]; "
+            "print(','.join(bad))")
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stderr[-500:]
+    assert result.stdout.strip() == "", f"tool layer imported: {result.stdout.strip()}"
 
 
 @pytest.mark.parametrize("name", TOOL_NAMES)

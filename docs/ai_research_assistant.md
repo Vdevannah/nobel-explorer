@@ -1,4 +1,6 @@
-# AI Research Assistant — Retrieval Foundation (Phase 1) and Tools (Phase 2)
+# AI Research Assistant — Retrieval (Phase 1), Tools (Phase 2) and Agent (Phase 3)
+
+> Local development feature. The AI research assistant is **not deployed**; the endpoint is disabled by default.
 
 ## Status: what exists and what does not
 
@@ -13,13 +15,15 @@
 | Optional document de-duplication and provisional weak-match flag | **Implemented (Phase 2)** — retrieval defaults unchanged |
 | Four validated, read-only LangChain tools (`search_laureates`, `get_laureate_details`, `get_nobel_statistics`, `search_nobel_knowledge`) | **Implemented (Phase 2)** — directly invocable, no LLM |
 | Scripted tool evaluation (30 cases) | **Implemented (Phase 2)** — measures tool correctness, *not* LLM tool selection |
-| LLM answer generation / OpenAI tool calling / autonomous agent | Planned (Phase 3) — **no LLM is instantiated and no LLM calls exist yet** |
-| `/ai/chat` API endpoint and frontend assistant page | Planned (Phase 3–4) |
+| LangChain agent with dynamic tool calling, evidence ids and citation validation | **Implemented (Phase 3)** |
+| Real OpenAI model evaluation (gpt-6-luna, 10 questions) | **Done (Phase 3B/3C)**; prompt v3 not yet run on a real model |
+| `POST /ai/chat` endpoint | **Implemented (Phase 3), local only** — disabled by default; not for public deployment |
+| Frontend assistant page | Planned (Phase 4) |
 | Docker / Railway deployment of the AI stack | Planned (Phase 5) — Dockerfiles are unchanged |
 
-Phases 1–2 do not change existing routes, frontend, Dockerfiles or database
-schema. `langchain-core` is used only for tool definitions; the OpenAI
-packages in `requirements-ai.txt` are not imported.
+Phases 1–3 do not change existing routes, frontend, Dockerfiles or database
+schema; Phase 3 only registers the new `/ai/chat` router. LangChain and OpenAI
+are imported lazily, so the application runs without AI packages.
 
 ## Architecture
 
@@ -294,14 +298,206 @@ tool correctness only; it is **not** LLM tool-selection accuracy (Phase 3).
 | Importing `tools.schemas` required LangChain | Lazy package exports | base-`.venv` test run |
 | Hard-coded level order in `structured.py` | Uses `EDUCATIONAL_LEVELS` | existing details tests |
 
+## Phase 3: research agent (`backend/ai/agent/`) — implemented locally, not deployed
+
+### What it is
+
+A LangChain agent that answers Nobel questions by **choosing and calling** the
+four Phase 2 tools, then answering only from the evidence those tools return.
+`langchain.agents.create_agent` builds a **LangGraph** state graph (model node,
+tool node, middleware nodes) whose state is the message list. The agent is
+stateless per request: no conversation memory, no multi-agent orchestration,
+no custom graph.
+
+```
+backend/ai/agent/
+  config.py      AgentConfig from environment (Pydantic only; key held as SecretStr)
+  schemas.py     ChatRequest / ChatResponse / Citation / ToolCallSummary / Usage
+  prompts.py     system prompt (PROMPT_VERSION)
+  evidence.py    request-scoped evidence registry + citation/URL validation
+  middleware.py  evidence annotation, call accounting, cooperative deadline
+  service.py     build_chat_model, run_agent, error mapping, response assembly
+  testing.py     ScriptedChatModel (tool-calling fake) for tests/offline evaluation
+backend/routes/ai.py                    POST /ai/chat (LangChain imported lazily)
+backend/ai/evaluation/agent_eval_set.json, run_agent_eval.py, grounding.py, reevaluate_saved.py
+```
+
+### Request lifecycle
+
+1. `POST /ai/chat {"question": ...}` is validated (Pydantic, length limit). If the
+   feature is disabled or `OPENAI_API_KEY` is missing the endpoint returns **503
+   without contacting OpenAI**.
+2. `run_agent` builds a fresh agent (~1 ms) with the existing tool registry,
+   a new evidence registry and three middleware: `AgentRunMiddleware`,
+   `ModelCallLimitMiddleware(run_limit=6, exit="end")` and
+   `ToolCallLimitMiddleware(run_limit=8, exit="continue")`.
+3. The graph loops: the model returns an `AIMessage` with `tool_calls`; the tool
+   node runs them (parallel calls allowed); `AgentRunMiddleware` rewrites each
+   JSON result with evidence ids (E1, E2, ...) **before** the model reads it.
+4. When the model answers without tool calls, `validate_answer` keeps only
+   evidence ids issued in this request, replaces others with `[unverified]`,
+   removes URLs no tool returned (`[link removed]`) and refuses `related_source`
+   URLs as citations.
+5. The response carries the answer, `grounding` (`cited`, `partially_cited`,
+   `uncited`, `no_evidence`), validated citations with provenance, a tool-call
+   summary, evidence limitations, token usage, latency and a request id.
+   Raw tool output and internal reasoning are never returned.
+
+### Model configuration
+
+OpenAI deprecated `gpt-4.1-mini` (shutdown 2027-01-14) and lists `gpt-6-luna`
+as its replacement; the default is `gpt-6-luna` (`OPENAI_MODEL` is configurable).
+
+```python
+# backend/ai/agent/service.py - build_chat_model()
+ChatOpenAI(model=config.model, api_key=config.openai_api_key,
+           timeout=20, max_retries=1, max_tokens=800,   # sent as max_completion_tokens
+           use_responses_api=False,                     # langchain-openai would auto-switch gpt-6* + tools to /v1/responses
+           reasoning_effort="none")                     # gpt-6-luna: Chat Completions function calling requires "none"
+```
+
+`temperature` is not sent (support is undocumented for gpt-6-luna). A mocked
+HTTP transport test pins the exact request: `/v1/chat/completions`,
+`reasoning_effort: "none"`, `max_completion_tokens: 800`, four function tools.
+
+### Configuration (environment)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AI_AGENT_ENABLED` | `false` | Feature flag; off unless explicitly enabled |
+| `OPENAI_API_KEY` | — | Only in the git-ignored `.env` (mode 600) or the shell; never logged or returned |
+| `OPENAI_MODEL` | `gpt-6-luna` | Validated model name |
+| `AI_AGENT_REASONING_EFFORT` | `none` | `unset` omits it for non-reasoning models |
+| `AI_AGENT_TEMPERATURE` | unset | Sent only if set |
+| `AI_AGENT_MAX_QUESTION_CHARS` | 1000 | Input limit |
+| `AI_AGENT_MAX_MODEL_CALLS` | 6 | Model-call budget |
+| `AI_AGENT_MAX_TOOL_CALLS` | 8 | Tool-call budget (parallel and unknown-tool calls count) |
+| `AI_AGENT_MAX_DURATION_SECONDS` | 45 | Request time limit |
+| `AI_AGENT_MAX_OUTPUT_TOKENS` | 800 | Per model call |
+| `AI_AGENT_PROVIDER_TIMEOUT_SECONDS` / `_MAX_RETRIES` | 20 / 1 | Per provider request |
+| `AI_ALLOW_PAID_EVAL` | `0` | Paid evaluation gate (evaluation runner only) |
+
+### Security and cost controls
+
+* Feature flag off by default; 503 without provider contact when disabled or unconfigured.
+* Read-only database sessions (Phase 1/2); tools accept only validated arguments; no SQL, shell or browsing tools.
+* Budgets: 6 model calls, 8 tool calls, 45 s, 800 output tokens per call; the LangGraph recursion limit (`8 × max_model_calls + 10`) is only a backstop (measured ~6 graph steps per model call).
+* Provider errors map to fixed messages via `isinstance` on the SDK classes (langchain-openai re-raises them as subclasses); provider text is never returned because some messages include part of the key.
+* Retrieved text is JSON data, never instructions; injected URLs and citation ids are stripped. Prompt injection is mitigated, **not eliminated**.
+* Paid evaluation requires `AI_ALLOW_PAID_EVAL=1`, stops on the first provider error and at a shared estimated-cost cap, and refuses to write output containing the API key.
+* Each request has its own agent, evidence registry and counters (tested with concurrent requests).
+* **Timeout is not cancellation:** `asyncio.wait_for` returns a `timeout` response at the deadline, but synchronous tool work already running in a worker thread finishes in the background, and a cancelled provider request may still be processed (and billed) by the provider.
+* Not yet present (required before public exposure): authentication, rate limiting, request-body size limits.
+
+### Real-model evaluation (gpt-6-luna, Chat Completions, reasoning effort "none")
+
+Ten required questions were run with a real model under a hard spend cap:
+R01, R04 and R06 in Stage 1, and R02–R10 (including R04 and R06 again with full
+execution records) in Phase 3C. The ten-question results combine R01 (Stage 1)
+with the nine Phase 3C runs.
+
+**R04 — actual execution (Phase 3C)**
+
+```
+HumanMessage  "Who won the 2023 Medicine prize and what did they discover?"
+AIMessage     search_laureates(year=2023, category="Physiology or Medicine", limit=10)
+ToolMessage   ok  E1 Drew Weissman, E2 Katalin Karikó            (structured_record)
+AIMessage     search_nobel_knowledge(query="What did Katalin Karikó and Drew Weissman discover?
+              nucleoside base modifications enabling mRNA vaccines against COVID-19", k=3)
+ToolMessage   ok  E3 contribution (source_linked, nobelprize.org, similarity 0.84),
+                  E4/E5 Simple/Expert explanations (unverified_educational)
+AIMessage     final answer (3 model calls, 2 tool calls, 12.0 s, 9,422 input / 5,042 cached / 150 output tokens)
+```
+
+> Katalin Karikó and Drew Weissman shared the 2023 Physiology or Medicine prize [E1][E2]. They discovered
+> that modifying nucleosides in synthetic mRNA can reduce unwanted immune activation, helping cells
+> translate the mRNA into protein and enabling effective mRNA vaccines against COVID-19 [E3].
+
+**Results.** The original automated scores are kept unchanged. The revised
+scores re-apply evaluator v2 offline to the saved answers (no model calls).
+
+| | Original automated (v1) | Revised offline (v2) | Manual review |
+|---|---|---|---|
+| Tool selection | 10/10 | 10/10 | all sensible |
+| Tool arguments (where constrained) | 5/5 | 5/5 | all reasonable |
+| Citation validity (no invented ids/URLs) | 10/10 | 10/10 | 1 misattribution (R07) |
+| "Groundedness" (v1 = keyword presence) | 6/7 | fact presence 5/5; concept coverage replaces R07's keyword | fully grounded 5/8 applicable; partial R02, R07, R10 |
+| Task success | 9/10 (R09 false negative) | 10/10 | 10/10 factually correct |
+
+* False premises (R06 Mathematics, R10 relativity) rejected correctly; out-of-scope R09 declined with "no reliable evidence"; R08 asked which Curie.
+* R02 and R10 state "not for (general) relativity" from a fact that was in the system prompt (since removed in prompt v3), not from retrieved evidence.
+* R07 cites the solar-panel source (E1) for a comparison that came from an unverified educational explanation (E2), and adds "external circuit", which no evidence contains.
+
+**Usage and cost (ten questions).** 21 model calls, 11 tool calls; 56,584 input
+tokens (41,359 cached, 73%), 922 output tokens. Estimated cost $0.0024 at
+$0.10 / $0.01 / $0.50 per 1M input / cached / output tokens (all twelve paid
+executions: $0.0029). Latency mean 3.9 s, median 2.8 s, max 12.0 s; the first
+knowledge search in a process loads the embedding model (**cold start 6.0 s**,
+warm searches 41–105 ms).
+
+**Prompt versions.** R01 ran with prompt `.1`, R02–R10 with `.2`. Prompt `.3`
+(Phase 3D: Einstein-specific fact removed; general guidance to use
+`get_laureate_details` for scientific or historical context; corrections must be
+evidence-backed) **has not been run against a real model**.
+
+A sanitized per-question summary is in
+[`docs/ai_agent_evaluation_summary.md`](ai_agent_evaluation_summary.md). Raw
+execution logs stay in the git-ignored `ai_index/`.
+
+### Citation validity versus groundedness
+
+* **Citation validity** (automated, exact): every cited id was issued in this request; no invented URLs.
+* **Groundedness** (manual): every claim is supported by the text of the evidence it cites. A valid id can sit next to an unsupported claim.
+* `grounding.py` provides deterministic aids — abstention check, concept coverage and a lexical citation-support review that lists numbers and terms absent from the cited evidence — but keyword checks **cannot establish claim-level entailment** (they miss negations and flag paraphrases). Manual evidence review remains required. No paid LLM judge is used.
+
+### Fake-model versus real-model testing
+
+`ScriptedChatModel` implements `bind_tools` and drives the real graph, tools,
+database and validation with scripted decisions: it tests orchestration, budgets,
+error handling and the evaluator, not model quality. Fake-mode evaluation
+(32 cases): every automated metric 32/32 and three deliberately wrong agents
+detected. Real-model quality is measured only by the paid runs above.
+
+### Local commands
+
+```bash
+# Offline (no paid calls)
+set -a; . ./.env.docker; set +a; export DB_HOST=127.0.0.1 DB_PORT=9303 TOKENIZERS_PARALLELISM=false
+.venv-ai/bin/python -m backend.ai.evaluation.run_agent_eval --mode fake --output ai_index/agent_eval_fake.json
+.venv-ai/bin/python -m backend.ai.evaluation.reevaluate_saved --stage1 ai_index/agent_eval_openai_stage1.json \
+    --stage2 ai_index/agent_eval_openai_stage2_full.json --output ai_index/agent_eval_openai_offline_reeval_v2.json
+# Local API (disabled by default -> 503)
+.venv-ai/bin/python -m uvicorn backend.main:app --reload
+curl -s -X POST localhost:8000/ai/chat -H 'Content-Type: application/json' -d '{"question":"Who won the 2022 Nobel Prize in Chemistry?"}'
+# PAID - only with explicit approval; key stays in the git-ignored .env
+AI_AGENT_ENABLED=true AI_ALLOW_PAID_EVAL=1 .venv-ai/bin/python -m backend.ai.evaluation.run_agent_eval \
+    --mode openai --ids R01 --max-cost-usd 0.05 --output ai_index/<new-file>.json
+```
+
+### Remaining work
+
+* Frontend assistant page (Phase 4); answers must be rendered as text, not HTML.
+* Before any public exposure: authentication, rate limiting, request-size limits, spend monitoring.
+* Deployment: CPU-only torch image, baked embedding model, warm-up at startup (avoids the 6 s cold start), read-only DB user.
+* Real-model evaluation of prompt v3 and of a larger question set; claim-level grounding review.
+
 ## Tests
 
-| Suite | Command | Result |
+Distinct tests (each counted once even when run in two environments):
+
+| Suite | Distinct tests | Result |
 |---|---|---|
-| AI unit tests (SQLite fixtures, `HashingEmbedder` — **not** semantic validation) | `pytest backend/ai/tests` | **243 passed**, 16 skipped (gated) — 80 Phase 1 + 163 Phase 2 |
-| Real model + live DB integration | `AI_RUN_REAL_MODEL_TESTS=1 AI_RUN_LIVE_DB_TESTS=1 pytest backend/ai/tests -m "real_model or live_db"` | **16 passed** (9 Phase 1 + 7 Phase 2): 6 real-model, 9 live read-only DB, 1 both |
-| Existing backend/ETL suite (isolated restored DB `nobel_explorer_ai_test`) | `pytest backend ETL --ignore=backend/ai` | 297 passed in both `.venv` and `.venv-ai` |
-| AI tests in the base `.venv` (no AI packages) | `pytest backend/ai` | schema and Phase 1 tests run; AI-dependent tests skip cleanly |
+| AI unit tests (`backend/ai/tests`, SQLite fixtures, fake embedder and fake chat model) | 377 | 377 passed (`.venv-ai`) |
+| Integration: real all-MiniLM-L6-v2 + live read-only MySQL (opt-in) | 18 | 18 passed |
+| Paid real-LLM test (opt-in, needs approval) | 1 | not run |
+| Existing backend/ETL regression suite (isolated `nobel_explorer_ai_test`) | 297 | 297 passed in `.venv` and `.venv-ai` |
+
+The base `.venv` (no AI packages) runs 166 of the AI unit tests and skips the
+rest cleanly, proving the application works without AI dependencies.
+
+Evaluations: Phase 2 tool evaluation 30/30; agent fake-model evaluation 32 cases,
+every automated metric 32/32, 3/3 negative controls detected (deterministic,
+not LLM accuracy); real-model results in the Phase 3 section.
 
 ## Reproduce
 
@@ -357,6 +553,17 @@ the first knowledge-tool call in a process loads it (≈4–5 s), later calls ta
 * Name search is a substring match; accent-insensitivity depends on the
   MySQL collation (true for the current `utf8mb4_0900_ai_ci`).
 * The weak-match threshold (0.40) is provisional and uncalibrated.
+* Phase 3 agent:
+  * Real-model evidence covers only ten questions (one run each); it does not establish general accuracy,
+    and prompt v3 has not been run on a real model.
+  * Claim-level grounding is assessed manually; the deterministic checks are review aids only.
+  * Citations can be valid yet misattributed (R07), and models may add facts from general knowledge.
+  * Prompt injection is mitigated, not eliminated.
+  * A timeout does not cancel synchronous tool work already running in a thread, and a cancelled
+    provider request may still be processed and billed.
+  * Evidence ids follow tool completion order for parallel calls.
+  * The first knowledge search in a process pays a ~6 s embedding-model cold start.
+  * The endpoint has no authentication, rate limiting or request-size limit and must stay local.
 * Each tool call opens a short-lived read-only engine (NullPool); fine for an
   assistant, not tuned for high request rates.
 * The local Homebrew MySQL on port 3306 rejects the `.env` credentials

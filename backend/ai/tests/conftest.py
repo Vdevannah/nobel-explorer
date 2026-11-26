@@ -38,12 +38,14 @@ from backend.models import (
 def pytest_configure(config):
     config.addinivalue_line("markers", "real_model: requires the real all-MiniLM-L6-v2 model")
     config.addinivalue_line("markers", "live_db: requires the live Nobel Explorer MySQL database")
+    config.addinivalue_line("markers", "paid_llm: calls a real, paid LLM provider (never run by default)")
 
 
 def pytest_collection_modifyitems(config, items):
     gates = {
         "real_model": ("AI_RUN_REAL_MODEL_TESTS", "set AI_RUN_REAL_MODEL_TESTS=1 to run real-model tests"),
         "live_db": ("AI_RUN_LIVE_DB_TESTS", "set AI_RUN_LIVE_DB_TESTS=1 to run live-database tests"),
+        "paid_llm": ("AI_RUN_PAID_LLM_TESTS", "PAID: set AI_RUN_PAID_LLM_TESTS=1 only after explicit approval"),
     }
     for item in items:
         for marker, (env, reason) in gates.items():

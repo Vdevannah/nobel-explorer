@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.routes.ai import router as ai_router
 from backend.routes.analytics import router as analytics_router
 from backend.routes.categories import router as categories_router
 from backend.routes.contributions import router as contributions_router
@@ -76,6 +77,7 @@ app.include_router(institutions_router)
 app.include_router(laureates_router)
 app.include_router(prizes_router)
 app.include_router(quiz_questions_router)
+app.include_router(ai_router)
 
 
 @app.get("/")
