@@ -1,6 +1,13 @@
 # Python virtual environment
 .venv/
 venv/
+# Additional local environments (e.g. .venv-ai, .venv-school-backup)
+.venv-*/
+
+# AI Research Assistant: generated vector index, manifests and model caches
+ai_index/
+.hf-cache/
+.cache/huggingface/
 
 # Python cache
 __pycache__/
