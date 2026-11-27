@@ -23,3 +23,10 @@ frontend/dist/
 
 # Logs
 *.log
+# Local-only material, never needed in an image
+.venv*/
+ai_index/
+manim-prototypes/
+docs/
+artifacts/
+.claude/

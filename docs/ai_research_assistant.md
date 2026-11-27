@@ -658,15 +658,15 @@ Distinct tests (each counted once even when run in two environments):
 | Suite | Distinct tests | Result |
 |---|---|---|
 | Frontend unit and component tests (`frontend/src/**/*.test.*`, Vitest + RTL, jsdom) | 299 | 299 passed |
-| AI unit tests (`backend/ai/tests`, SQLite fixtures, fake embedder and fake chat model) | 444 | 444 passed (`.venv-ai`) |
+| AI unit tests (`backend/ai/tests`, SQLite fixtures, fake embedder and fake chat model) | 488 | 488 passed (`.venv-ai` and inside the Linux image) |
 | Integration: real all-MiniLM-L6-v2 + live read-only MySQL (opt-in) | 18 | 18 passed |
 | Paid real-LLM test (opt-in, needs approval) | 1 | not run |
 | Existing backend/ETL regression suite (isolated `nobel_explorer_ai_test`) | 297 | 297 passed in `.venv` and `.venv-ai` |
 
 The base `.venv` (no AI packages) runs 186 of the AI unit tests and skips the
 rest cleanly, proving the application works without AI dependencies. Total distinct
-permanent tests: 299 frontend + 444 AI unit + 18 integration + 297 backend/ETL = 1,058
-(paid test excluded). Counts as of the Nobel Intelligence MVP.
+permanent tests: 299 frontend + 488 AI unit + 18 integration + 297 backend/ETL = 1,102
+(paid test excluded). Counts as of Phase 5B (44 new guard and index-consistency tests).
 
 Evaluations: Phase 2 tool evaluation 30/30; agent fake-model evaluation 32 cases,
 every automated metric 32/32, 3/3 negative controls detected (deterministic,
@@ -736,10 +736,13 @@ the first knowledge-tool call in a process loads it (≈4–5 s), later calls ta
   * A timeout does not cancel synchronous tool work already running in a thread, and a cancelled
     provider request may still be processed and billed.
   * Evidence ids follow tool completion order for parallel calls.
-  * The first knowledge search in a process pays a ~6 s embedding-model cold start.
-  * The endpoint has no authentication, rate limiting or request-size limit and must stay local.
+  * The first knowledge search in a process pays a ~6 s embedding-model cold start (production
+    loads the model at startup when the assistant is enabled).
+  * The endpoint has no authentication. Phase 5B added rate, daily, concurrency, spending and
+    body-size limits; their counters are in memory and reset on restart.
 * Phase 4 frontend and evaluation:
-  * The assistant is local only: no authentication, rate limiting or spend monitoring; not deployed.
+  * Not deployed yet (Phase 5B prepared the image and safeguards). Rate-limit rejections show
+    the page's generic "currently unavailable" notice.
   * The conversation is lost when the page is left or reloaded (by design: no persistent history).
   * Only `**bold**` is rendered; other Markdown a model may produce appears literally.
   * Evidence grouping is presentation only; the backend still issues duplicate ids for repeated records.
@@ -753,13 +756,150 @@ the first knowledge-tool call in a process loads it (≈4–5 s), later calls ta
 * The local Homebrew MySQL on port 3306 rejects the `.env` credentials
   (error 1045); development used the compose database on port 9303.
 
-## Deployment considerations (not yet applied)
+## Phase 5B: production preparation for Railway (not yet deployed)
 
-* Linux `torch` from PyPI pulls CUDA libraries; use the CPU wheel index and
-  re-resolve `requirements-ai.txt` inside `python:3.12-slim`.
-* Bake the model into the image (or a volume) to avoid runtime downloads.
-* ≈1 GB peak memory while embedding — check the Railway plan.
-* Railway's filesystem is ephemeral: rebuild the index at startup (~10 s) or
-  mount a volume.
-* Use a dedicated SELECT-only MySQL user for AI access (tools already run in READ ONLY sessions).
-* Keep Chroma telemetry disabled (already set in code).
+Nobel Intelligence runs inside the existing **backend** service; no new Railway
+service, volume or database is needed. The assistant stays off until
+`AI_AGENT_ENABLED=true` is set, and while it is off the embedding model is never loaded.
+
+### Production image (`backend/Dockerfile`)
+
+* `python:3.12-slim`, CPU-only PyTorch `2.15.0+cpu` from the PyTorch CPU index, then
+  `requirements-ai.txt` unchanged (the macOS pins resolve on Linux; `pip check` is clean).
+* The pinned model `sentence-transformers/all-MiniLM-L6-v2@1110a243…` is downloaded at
+  build time (safetensors weights only) into `/opt/huggingface`.
+* The packaged index `deploy/ai-index/chroma` (1,064 chunks) is copied in.
+* Runtime is offline: `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, Chroma telemetry off.
+* Runs as an unprivileged user (uid 10001), single uvicorn worker on port 8000 (unchanged).
+* When the assistant is enabled, a background thread loads the model and opens the index
+  at startup (`AI_WARMUP`, default true); `/health` is served immediately.
+
+Measured locally with Docker Desktop, `linux/amd64` emulated on an Apple M1 Pro.
+Memory figures are representative; timings are pessimistic compared with native amd64.
+
+| Measurement | Current image | New image |
+|---|---|---|
+| Image size, compressed / unpacked | 68 MB / 205 MB | 651 MB / 2.1 GB |
+| Cold build (no cache) | — | 141 s |
+| Ready (`/health` 200), AI disabled | 1.3 s | 1.7 s |
+| Ready, AI enabled (warm-up continues in background) | — | 2.6–3.8 s |
+| Model and index load | — | 7.2–9.9 s |
+| Idle memory, AI disabled | 69 MiB | 77 MiB |
+| Idle memory, AI enabled, model loaded | — | 512–530 MiB |
+| Memory after concurrent AI requests | — | 600 MiB |
+| Peak RSS of a retrieval process | — | 674 MiB |
+| Knowledge search latency, first / warm | — | 198 ms / 19 ms |
+
+The unpacked size is mostly site-packages (1.9 GB: PyTorch, transformers, ChromaDB and
+onnxruntime); the model is 88 MB and the index 9.7 MB.
+
+### Packaged index (`deploy/ai-index/`)
+
+* `chroma/` is a byte-identical copy of the local index; `SHA256SUMS` lists its files and
+  `index_manifest.json` is the build manifest without local paths.
+* It was checked before committing: 1,064 embeddings, no e-mail addresses, keys,
+  credentials or local paths. The only URLs are public sources (nobelprize.org, NASA,
+  NIST, energy.gov, royalsociety.org).
+* Opening the index makes Chroma append to its internal `acquire_write` table, so
+  `chroma.sqlite3` changes inside a running container; embeddings and HNSW files do not.
+  The container filesystem is discarded on redeploy.
+* The index refers to records by internal database ids. Check that a database matches it
+  (read-only) with:
+
+  ```bash
+  python -m backend.ai.check_index_consistency --index-dir deploy/ai-index/chroma
+  ```
+
+  The check rebuilds the chunk list from the database inside `SET SESSION TRANSACTION READ
+  ONLY` sessions, compares chunk ids and content hashes, and opens a temporary copy of the
+  index. It prints ids and counts only. Exit codes: 0 consistent, 1 different (rebuild
+  the index from that database), 2 could not run. The local database is consistent
+  (1,064 of 1,064 chunks).
+
+### Safeguards (`backend/ai/guard.py`)
+
+Checked after validation and the enabled check, before any model call. Only admitted
+requests are counted.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `AI_RATE_PER_IP_PER_MINUTE` | 5 | sliding 60 s window per client; 429 `ip_minute_limit` |
+| `AI_RATE_PER_IP_PER_DAY` | 50 | per client per UTC day; 429 `ip_daily_limit` |
+| `AI_GLOBAL_DAILY_LIMIT` | 100 | all clients per UTC day; 429 `global_daily_limit` |
+| `AI_MAX_CONCURRENT_REQUESTS` | 2 | requests in flight; 429 `busy` immediately, no queue |
+| `AI_DAILY_SPEND_LIMIT_USD` | 0.05 | spending guard; 503 `spend_limit` |
+| `AI_MONTHLY_SPEND_LIMIT_USD` | 0.90 | spending guard; 503 `spend_limit` |
+| `AI_MAX_BODY_BYTES` | 16384 | request body for `/ai/*`; 413 (Content-Length and streamed bodies) |
+| `AI_CLIENT_IP_HEADER` | empty | header that holds the client address; `x-real-ip` on Railway |
+
+* **Client address.** Forwarded headers are ignored unless `AI_CLIENT_IP_HEADER` is set.
+  Railway's edge overwrites `X-Real-IP` on public requests. A missing or invalid header
+  falls back to the TCP peer, which fails safe: all clients then share one bucket.
+  `X-Forwarded-For` is never used. Requests over Railway private networking bypass the
+  edge, so the backend must not be called from other private services.
+* **Spending guard.** Each request reserves its worst case before it runs: 6 model calls ×
+  (20,000 input + 800 output tokens) at $0.10 / $0.50 per 1M tokens, which is $0.0144.
+  When the request ends, the reservation is replaced by a conservative cost:
+  * the reported usage, with cached input at $0.01 per 1M tokens;
+  * $0.0024 for each successful call without reported usage;
+  * $0.0024 more for a timeout, or for an error the provider may still bill.
+
+  Errors rejected before billing cost nothing: authentication, connection, rate limit,
+  bad request, model not found. A crashed or hung request keeps its full reservation.
+  A request is admitted only if spent + reserved + its own reservation stays within both
+  caps. Two concurrent reservations fit in the daily cap. Thirty days at the daily cap
+  would exceed $1, so the $0.90 monthly cap is what keeps spending under the budget.
+* **Concurrency and timeouts.** A slot is released only in `finally`, after the agent task
+  finished or was cancelled. The route wraps the agent in an outer limit of
+  `AI_AGENT_MAX_DURATION_SECONDS` + 15 s, so a hung request always frees its slot. A
+  client that disconnects keeps its slot until the server finishes, so it cannot retry
+  into a second one (tested with a real uvicorn server).
+* **Counters reset on restart.** All counters live in process memory. A restart or redeploy
+  clears the rate limits, daily counts and spending totals; each replica would keep its
+  own. Run a single replica with a single worker. The OpenAI project budget ($1 per
+  month, with usage alerts) is the backstop that survives restarts.
+* Rejections return a `ChatResponse` body (status `unavailable`, `error.type` as above,
+  `Retry-After` header), so the existing page renders them without UI changes. The page
+  shows its generic "currently unavailable" notice, not the specific reason.
+* An invalid limit variable makes `/ai/chat` return 503; the rest of the API is unaffected.
+
+### Railway variables (backend service)
+
+| Variable | Value |
+|---|---|
+| `OPENAI_API_KEY` | key of the existing dedicated OpenAI project; sealed; backend only, never `VITE_*` |
+| `AI_AGENT_ENABLED` | `false` for the first deploy; `true` to switch on; `false` is the kill switch |
+| `OPENAI_MODEL` | `gpt-6-luna` (default) |
+| `AI_CLIENT_IP_HEADER` | `x-real-ip` |
+| Limits | defaults above; override only if needed |
+| Existing `DB_*`, `FRONTEND_ORIGINS` | unchanged |
+
+The image already sets `HF_HUB_OFFLINE`, `TRANSFORMERS_OFFLINE`, `AI_CHROMA_DIR`,
+`AI_EMBEDDING_MODEL` and `AI_EMBEDDING_REVISION`. Keep replicas at 1.
+
+### Validation (Phase 5B, no paid calls)
+
+* All test suites pass; see [Tests](#tests).
+* Inside the Linux image, all 488 AI unit tests pass and the scripted agent evaluation
+  scores 32/32 on every metric (no OpenAI key in the container).
+* All 28 existing GET responses and the quiz POST are byte-identical between the current
+  and the new image (AI disabled, same database). `/ai/chat` returns 503 while disabled.
+* End-to-end in the production container (AI enabled, placeholder key, provider address
+  pointed at a local socket that never answers):
+  * a 6th request from one address gets 429; a spoofed `X-Forwarded-For` does not reset it;
+  * a 3rd concurrent request gets 429 `busy` in 15 ms;
+  * abandoned requests keep their slots;
+  * the global limit applies;
+  * a 20 KB body gets 413;
+  * `/health` and `/laureates` stay responsive.
+
+### Remaining deployment steps
+
+1. Commit and push the branch (`deploy/ai-index/` included).
+2. Merge into `main`: Railway deploys `main` to production. Deploy with
+   `AI_AGENT_ENABLED=false` and `AI_CLIENT_IP_HEADER=x-real-ip`.
+3. Check the existing pages. In the backend service shell, run the consistency check
+   against the production database; it must print CONSISTENT.
+4. Set the OpenAI key, set `AI_AGENT_ENABLED=true`, and ask one or two questions.
+5. Rollback: `AI_AGENT_ENABLED=false` switches the assistant off; Railway *Redeploy* of
+   the previous deployment restores the old image.

@@ -1,9 +1,13 @@
+import logging
 import os
+import threading
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.ai.guard import BodySizeLimitMiddleware, GuardConfig
 from backend.routes.ai import router as ai_router
 from backend.routes.analytics import router as analytics_router
 from backend.routes.categories import router as categories_router
@@ -29,7 +33,44 @@ FRONTEND_ORIGINS = [
 ]
 
 
+logger = logging.getLogger(__name__)
+
+
+def _warm_up_ai() -> None:
+    """Load the embedding model and open the index so the first question does not
+    pay the cold start. Runs in a background thread; failures are only logged."""
+    try:
+        from backend.ai.retrieval import get_default_store
+
+        store = get_default_store()
+        store.embedder.embed_query("Nobel Prize")
+        logger.info("AI warm-up complete: %s indexed chunks", store.count())
+    except Exception as exc:  # noqa: BLE001 - never block or crash the API
+        logger.warning("AI warm-up failed: %s", type(exc).__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Only when the assistant is enabled; disabled deployments never load the model.
+    from backend.ai.agent.config import AgentConfigError, load_agent_config
+
+    try:
+        enabled = load_agent_config().availability()[0]
+    except AgentConfigError:
+        enabled = False
+    if enabled and os.getenv("AI_WARMUP", "true").strip().lower() not in {"0", "false", "no", "off"}:
+        threading.Thread(target=_warm_up_ai, name="ai-warm-up", daemon=True).start()
+    yield
+
+
+try:
+    MAX_AI_BODY_BYTES = GuardConfig.from_env().max_body_bytes
+except ValueError:
+    MAX_AI_BODY_BYTES = GuardConfig.max_body_bytes
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Nobel Explorer API",
     description=(
         "Explore Nobel Prize facts, laureates, prizes, award-time "
@@ -38,6 +79,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Added before CORS so that CORS stays the outermost layer.
+app.add_middleware(BodySizeLimitMiddleware, max_bytes=MAX_AI_BODY_BYTES, prefix="/ai/")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONTEND_ORIGINS,

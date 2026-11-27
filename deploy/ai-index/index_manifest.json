@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-11-26T04:32:36+00:00",
+  "python": "3.12.15",
+  "documents_by_type": {
+    "connection": 12,
+    "contribution": 4,
+    "explanation": 16,
+    "laureate_record": 1018
+  },
+  "documents_total": 1050,
+  "chunks_by_type": {
+    "connection": 12,
+    "contribution": 5,
+    "explanation": 29,
+    "laureate_record": 1018
+  },
+  "chunks_total": 1064,
+  "multi_chunk_documents": [
+    "contribution:609",
+    "explanation:38:expert",
+    "explanation:39:expert",
+    "explanation:609:advanced",
+    "explanation:609:expert",
+    "explanation:609:explore",
+    "explanation:609:simple",
+    "explanation:779:advanced",
+    "explanation:779:expert",
+    "explanation:779:explore"
+  ],
+  "chunk_tokens": {
+    "max": 202,
+    "mean": 73.7,
+    "limit": 256
+  },
+  "chunking": {
+    "chunk_size_chars": 900,
+    "chunk_overlap_chars": 150,
+    "max_tokens": 256
+  },
+  "embedding": {
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "embedding_dim": 384,
+    "embedding_normalized": true,
+    "embedding_max_seq_length": 256
+  },
+  "index": {
+    "persist_dir": "deploy/ai-index/chroma",
+    "collection": "nobel_knowledge",
+    "distance_space": "cosine"
+  },
+  "dry_run": false,
+  "sync": {
+    "added": 0,
+    "updated": 0,
+    "unchanged": 1064,
+    "deleted": 0,
+    "total": 1064,
+    "embedded": 0,
+    "embed_seconds": 0.0
+  },
+  "reopened_count": 1064,
+  "reopened_distance_space": "cosine",
+  "index_size_bytes": 10053360,
+  "timings": {
+    "extract_seconds": 0.145,
+    "model_load_seconds": 3.537,
+    "chunk_seconds": 0.235,
+    "embed_seconds": 0.0
+  },
+  "packaged": {
+    "packaged_on": "2026-11-27",
+    "source": "copy of the local ai_index/chroma index (byte-identical)",
+    "consistency_check": "python -m backend.ai.check_index_consistency --index-dir deploy/ai-index/chroma"
+  }
+}

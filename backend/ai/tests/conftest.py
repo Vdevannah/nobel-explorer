@@ -35,6 +35,19 @@ from backend.models import (
 
 
 
+# Generous limits so ordinary API tests are not throttled by each other; the
+# guard itself is tested in test_ai_guard.py with explicit limits.
+UNLIMITED_GUARD = dict(per_ip_per_minute=100_000, per_ip_per_day=100_000, global_per_day=100_000,
+                       max_concurrent=1_000, daily_spend_limit_usd=1e6, monthly_spend_limit_usd=1e6)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_ai_guard(monkeypatch):
+    from backend.ai import guard
+
+    monkeypatch.setattr(guard, "_guard", guard.AIGuard(guard.GuardConfig(**UNLIMITED_GUARD)))
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "real_model: requires the real all-MiniLM-L6-v2 model")
     config.addinivalue_line("markers", "live_db: requires the live Nobel Explorer MySQL database")

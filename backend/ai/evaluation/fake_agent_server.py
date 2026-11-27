@@ -138,6 +138,12 @@ def create_dev_app(tool_context=None, plans: dict[str, dict[str, Any]] | None = 
     runner = make_scripted_runner(plans or load_plans(), tool_context)
     app.dependency_overrides[ai_route.get_agent_config] = scripted_config
     app.dependency_overrides[ai_route.get_agent_runner] = lambda: runner
+    # Scripted model, no spending: limits would only slow repeated local test runs.
+    from backend.ai.guard import AIGuard, GuardConfig
+
+    dev_guard = AIGuard(GuardConfig(per_ip_per_minute=10_000, per_ip_per_day=100_000, global_per_day=100_000,
+                                    max_concurrent=100, daily_spend_limit_usd=1e6, monthly_spend_limit_usd=1e6))
+    app.dependency_overrides[ai_route.get_ai_guard] = lambda: dev_guard
     return app
 
 
