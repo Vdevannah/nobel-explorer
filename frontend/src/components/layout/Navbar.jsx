@@ -73,6 +73,14 @@ function Navbar() {
           >
             Quiz
           </NavLink>
+          <NavLink
+            className={({ isActive }) =>
+              isActive ? "nav-link nav-link-active" : "nav-link"
+            }
+            to="/assistant"
+          >
+            Ask AI
+          </NavLink>
           <button
             className="theme-toggle"
             type="button"

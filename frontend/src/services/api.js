@@ -238,4 +238,98 @@ export function getAnalyticsForCategory(category, { signal } = {}) {
   }));
 }
 
+// ---------------------------------------------------------------------------
+// AI Research Assistant (POST /ai/chat)
+//
+// Unlike apiRequest, this never throws for HTTP errors: /ai/chat returns a
+// structured ChatResponse for 200, 503, 502 and 500, and that body (status,
+// answer, citations, error) is what the page needs. The result is a tagged
+// object so every outcome can be rendered deliberately:
+//   { kind: "response", httpStatus, response }      a ChatResponse body
+//   { kind: "unavailable", httpStatus }            503 with {"detail": "..."}
+//   { kind: "validation_error", httpStatus, message } 422 (string or list detail)
+//   { kind: "aborted" }                            the browser request was cancelled
+//   { kind: "network_error" }                      the server could not be reached
+//   { kind: "malformed_response", httpStatus }     body was not valid JSON
+//   { kind: "unexpected_response", httpStatus }    JSON of an unknown shape
+// No automatic retries. The OpenAI key lives only on the server.
+
+export const ASSISTANT_MAX_QUESTION_CHARS = 1000; // backend default AI_AGENT_MAX_QUESTION_CHARS
+
+const ASSISTANT_STATUSES = new Set(["completed", "budget_exhausted", "timeout", "error", "unavailable"]);
+
+function isChatResponse(body) {
+  return (
+    body !== null
+    && typeof body === "object"
+    && !Array.isArray(body)
+    && typeof body.request_id === "string"
+    && ASSISTANT_STATUSES.has(body.status)
+    && (body.answer === null || body.answer === undefined || typeof body.answer === "string")
+    && (body.citations === undefined || Array.isArray(body.citations))
+    && (body.tool_calls === undefined || Array.isArray(body.tool_calls))
+    && (body.evidence_limitations === undefined || Array.isArray(body.evidence_limitations))
+  );
+}
+
+function validationMessage(detail) {
+  if (typeof detail === "string" && detail.trim()) {
+    return detail.trim();
+  }
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => (item && typeof item.msg === "string" ? item.msg.trim() : ""))
+      .filter(Boolean);
+    if (messages.length) {
+      return messages.join(" ");
+    }
+  }
+  return "The question could not be accepted. Please check it and try again.";
+}
+
+function isAbortError(error, signal) {
+  return Boolean(signal?.aborted) || error?.name === "AbortError";
+}
+
+export async function askResearchAssistant(question, { signal } = {}) {
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}/ai/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ question }),
+      signal,
+    });
+  } catch (error) {
+    return isAbortError(error, signal) ? { kind: "aborted" } : { kind: "network_error" };
+  }
+
+  let text;
+  try {
+    text = await response.text();
+  } catch (error) {
+    return isAbortError(error, signal) ? { kind: "aborted" } : { kind: "network_error" };
+  }
+
+  let body;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    return { kind: "malformed_response", httpStatus: response.status };
+  }
+
+  if (isChatResponse(body)) {
+    return { kind: "response", httpStatus: response.status, response: body };
+  }
+  if (response.status === 503) {
+    // Invalid server configuration returns {"detail": "..."}; the detail is an
+    // operator message, so it is not shown to visitors.
+    return { kind: "unavailable", httpStatus: 503 };
+  }
+  if (response.status === 422) {
+    return { kind: "validation_error", httpStatus: 422, message: validationMessage(body?.detail) };
+  }
+  return { kind: "unexpected_response", httpStatus: response.status };
+}
+
 export { API_BASE_URL };

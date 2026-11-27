@@ -5,7 +5,7 @@ locally (git-ignored) and are not published. No credentials or request identifie
 
 * Model: `gpt-6-luna` via Chat Completions, `reasoning_effort="none"`, LangChain `create_agent` with the four Phase 2 tools.
 * Runs: R01 from Stage 1 (prompt `2026-11-26.1`); R02–R10 from Phase 3C (prompt `2026-11-26.2`). One run per question.
-* Prompt `2026-11-26.3` (Phase 3D) has **not** been evaluated with a real model.
+* Prompt `2026-11-26.3` (Phase 3D) was evaluated with a real model in Phase 4D.2 (section below). Prompt `2026-11-26.4` (Phase 4E.1) was evaluated on six targeted questions in Phase 4E.2.
 * Ten questions demonstrate the integration; they do not establish general accuracy.
 
 ## Results
@@ -132,3 +132,60 @@ median 2.8 s, max 12.0 s (includes a one-time 6.0 s embedding-model load; warm k
 * R09's original v1 failure was a phrase-list false negative; v2 accepts a valid abstention only if no further claims follow.
 * R07's original v1 failure required the word "photovoltaic"; v2 checks concept coverage instead.
 * R02 and R10 relied on a system-prompt fact for "not for relativity"; prompt v3 removes that fact (not yet re-run).
+
+## Phase 4D.2: real-model browser evaluation of prompt `2026-11-26.3`
+
+Nine questions, each asked once through the React page against the local FastAPI backend
+(`gpt-6-luna`, Chat Completions, reasoning effort "none"). Sanitized results:
+`docs/teaching/phase4_real_model_screenshots/` (Stage 1, Stage 2 and `phase4d2_consolidated.json`).
+
+| Measure | Result |
+|---|---|
+| HTTP / status | 9/9 HTTP 200, `completed`; no provider errors or retries |
+| Factually correct (manual) | 9/9 |
+| Task success (manual) | 9/9 (P4-R05 with a caveat: unrequested 1950 Physics substitution) |
+| Citation validity (automated) | 9/9: no fabricated ids or URLs |
+| Citation misattribution (manual) | 0/9 |
+| Claim support (manual) | fully supported 5 (P4-R01, R02, R03, R04, R09); partially 1 (P4-R08, minor glosses); not applicable 3 (P4-R05 invalid category, R06 abstention, R07 missing 2026 records) |
+| Grounding values | cited 7, uncited 1, no_evidence 1 |
+| Calls and tokens | 20 model calls, 12 tool calls; 57,574 input (42,776 cached) and 831 output tokens |
+| Estimated cost | $0.00232306 for all nine |
+| User-perceived latency | mean 3.9 s, median 2.5 s, max 8.5 s (first knowledge search loads the embedding model: 5.5 s) |
+
+Compared with Phase 3 (prompt .2): the solar-cell answer no longer misattributes the photoelectric
+comparison, and the Einstein correction is now supported by retrieved evidence (E2: "not general
+relativity") rather than a prompt fact. Sourdough abstention is unchanged. The Mathematics question changed
+from a rejected tool call plus a category list to an unrequested Physics answer, which prompt v4 addresses.
+
+Abstention check, same saved answers: evaluator v2 recognised 0/2 expected abstentions (P4-R06, P4-R07) because
+of their wording; evaluator v3 recognises 2/2 with no false abstentions on the other seven answers. This is an
+evaluator change, not a change in the answers.
+
+## Phase 4E.2: targeted real-model validation of prompt `2026-11-26.4`
+
+Six questions, each asked once through the React page (`gpt-6-luna`). Sanitized results:
+`docs/teaching/phase4e2_real_model_screenshots/phase4e2_results.json`.
+
+| ID | Question | Result (manual) | Same question under prompt v3 |
+|---|---|---|---|
+| V01 | Mathematics 1950 | Correct but **substituted** the 1950 Physics laureate (unlabelled). Rule not followed. | P4-R05: identical behaviour |
+| V02 | Computer Science 2020 (new) | Correct but **substituted** the 2020 Physics prize, naming one of three laureates (`limit: 1`). Rule not followed; no unrelated award introduced. | — |
+| V03 | Einstein / relativity | False premise corrected; fully supported by E1 (motivation) and E2 ("not general relativity"). | P4-R09: equivalent (no Markdown this time) |
+| V04 | 2026 Chemistry | Appropriate coverage abstention; no fabricated laureate. | P4-R07: equivalent |
+| V05 | 2022 Chemistry | Correct, fully supported. | P4-R01: identical |
+| V06 | Sourdough | Appropriate abstention. | P4-R06: equivalent |
+
+All 6 HTTP 200 / `completed`; citation validity 6/6; misattribution 0/6; no fabricated laureates.
+13 model calls, 7 tool calls, 35,888 input (27,443 cached) and 454 output tokens; estimated $0.00134593.
+User-perceived latency mean 4.0 s, median 2.6 s, max 9.6 s (V03 included the 5.3 s embedding-model load).
+
+Conclusion: the prompt-only rule did not change invalid-category behaviour for this model; the other four
+answers did not regress. Evaluator v3 disagreed with manual review on V06 (false negative abstention); the
+lexical support review missed V02's spelled-out "three laureates", which comes from tool metadata rather than
+the cited record. Six questions do not establish general accuracy.
+
+## Status at the end of Phase 4
+
+Invalid-category substitution (P4-R05, V01, V02) is accepted as a known MVP limitation and documented; no
+guardrail or further prompt change was made. Across Phase 4, 15 real-model browser questions were run once
+each (9 on prompt v3, 6 on prompt v4) for an estimated $0.00366899 in total.

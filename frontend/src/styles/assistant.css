@@ -1,0 +1,603 @@
+/* AI Research Assistant page. Every selector is scoped to .assistant-* so no
+   other page is affected. Colours come from the shared design tokens; the
+   two page-scoped variables below follow the quiz page's error colour. */
+
+.assistant-page {
+  --assistant-error: #e0698a;
+  --assistant-warning: var(--color-gold);
+  --assistant-warning-text: #e8c46a;
+  display: grid;
+  gap: var(--space-6);
+  max-width: 60rem;
+  padding-block: var(--space-7) var(--space-8);
+}
+
+:root[data-theme="light"] .assistant-page {
+  --assistant-error: #a3214a;
+  --assistant-warning-text: #7a5300;
+}
+
+.assistant-header h1 {
+  margin: var(--space-2) 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+}
+
+.assistant-intro {
+  max-width: 46rem;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+}
+
+.assistant-coverage {
+  max-width: 46rem;
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-gold);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+}
+
+.assistant-subheading {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Suggested questions */
+.assistant-suggestions ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-suggestion {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assistant-suggestion:hover {
+  border-color: var(--color-gold);
+}
+
+/* Conversation */
+.assistant-conversation {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.assistant-exchange {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+.assistant-label {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.assistant-question-text {
+  margin: 0;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 650;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assistant-response {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.assistant-answer-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
+.assistant-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.assistant-pending-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-gold);
+  animation: assistant-pulse 1.2s ease-in-out infinite;
+}
+
+.assistant-elapsed {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes assistant-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* Citations and markers inside an answer */
+.assistant-citation-group {
+  white-space: nowrap;
+}
+
+.assistant-citation {
+  margin: 0 0.1rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-elevated);
+  color: var(--color-purple-light);
+  font: inherit;
+  font-size: 0.78em;
+  font-weight: 700;
+  line-height: 1.5;
+  vertical-align: 0.1em;
+  cursor: pointer;
+}
+
+.assistant-citation:hover {
+  border-color: var(--color-gold);
+}
+
+.assistant-citation-unmatched {
+  color: var(--color-text-secondary);
+}
+
+.assistant-marker {
+  padding: 0 0.3rem;
+  border-radius: var(--radius-small);
+  font-size: 0.85em;
+  font-weight: 650;
+}
+
+.assistant-marker--unverified,
+.assistant-marker--link_removed {
+  border: 1px dashed var(--assistant-error);
+  color: var(--assistant-error);
+}
+
+/* Limitations */
+.assistant-limitations ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+/* Collapsed disclosure content. Without this, display: grid on the panels
+   below would override the hidden attribute and keep them visible. */
+.assistant-page [hidden] {
+  display: none;
+}
+
+/* Disclosure headings (evidence, tool activity) */
+.assistant-disclosure-heading {
+  margin: 0;
+}
+
+.assistant-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.assistant-disclosure:hover {
+  color: var(--color-text-primary);
+}
+
+.assistant-disclosure-icon {
+  display: inline-block;
+  width: 0.8rem;
+}
+
+/* Evidence cards */
+.assistant-evidence-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-evidence-card {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-left-width: 3px;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-elevated);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.assistant-evidence-card:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.assistant-evidence-card--structured_record { border-left-color: var(--color-purple-light); }
+.assistant-evidence-card--source_linked { border-left-color: var(--color-gold); }
+.assistant-evidence-card--unverified_educational,
+.assistant-evidence-card--unknown { border-left-color: var(--color-border); border-left-style: dashed; }
+
+.assistant-evidence-card p {
+  margin: 0;
+}
+
+.assistant-evidence-card-header {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.assistant-evidence-id {
+  flex: none;
+  min-width: 2.2rem;
+  white-space: nowrap;
+  color: var(--color-purple-light);
+  font-weight: 700;
+}
+
+.assistant-evidence-grouped {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.assistant-evidence-title {
+  min-width: 0;
+  font-weight: 650;
+}
+
+.assistant-provenance {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.assistant-evidence-meta,
+.assistant-related-context {
+  color: var(--color-text-secondary);
+}
+
+.assistant-related-context {
+  font-style: italic;
+}
+
+.assistant-evidence-warning {
+  color: var(--assistant-warning-text);
+  font-weight: 650;
+}
+
+.assistant-source-link,
+.assistant-internal-link {
+  color: var(--color-purple-light);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+/* Grounding */
+.assistant-grounding {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.assistant-grounding p {
+  margin: 0;
+}
+
+.assistant-grounding-badge {
+  display: grid;
+  gap: 0.15rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-small);
+  font-size: 0.9rem;
+}
+
+.assistant-grounding-badge--info { border-left-color: var(--color-purple-light); }
+.assistant-grounding-badge--warning { border-left-color: var(--assistant-warning); }
+.assistant-grounding-badge--neutral { border-left-color: var(--color-border); }
+
+.assistant-grounding-label {
+  font-weight: 700;
+}
+
+.assistant-grounding-detail,
+.assistant-disclaimer {
+  color: var(--color-text-secondary);
+}
+
+.assistant-disclaimer {
+  font-size: 0.82rem;
+}
+
+/* Tool activity */
+.assistant-tools-panel {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.assistant-tools-intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+}
+
+.assistant-tool-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-tool {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-elevated);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.assistant-tool p {
+  margin: 0;
+}
+
+.assistant-tool-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.assistant-tool-name {
+  font-weight: 700;
+}
+
+.assistant-tool-status {
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.assistant-tool-status--ok { color: var(--color-text-secondary); }
+.assistant-tool-status--failed { color: var(--assistant-error); }
+
+.assistant-tool-description,
+.assistant-tool-evidence {
+  color: var(--color-text-secondary);
+}
+
+.assistant-tool-args {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+}
+
+.assistant-tool-args div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.assistant-tool-args dt {
+  color: var(--color-text-secondary);
+  font-weight: 650;
+}
+
+.assistant-tool-args dt::after {
+  content: ":";
+}
+
+.assistant-tool-args dd {
+  min-width: 0;
+  margin: 0;
+}
+
+/* Copy answer */
+.assistant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.assistant-action-button {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.assistant-action-button:hover {
+  border-color: var(--color-gold);
+}
+
+.assistant-copy-feedback {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.assistant-copy-feedback--failed {
+  color: var(--assistant-error);
+}
+
+/* Extended wait */
+.assistant-pending-block {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.assistant-extended-wait {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Notices */
+.assistant-notice {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-elevated);
+}
+
+.assistant-notice p {
+  margin: 0;
+}
+
+.assistant-notice-title {
+  font-weight: 700;
+}
+
+.assistant-notice--warning {
+  border-left-color: var(--assistant-warning);
+}
+
+.assistant-notice--error {
+  border-left-color: var(--assistant-error);
+}
+
+.assistant-notice--neutral {
+  border-left-color: var(--color-border);
+}
+
+/* Composer */
+.assistant-composer {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+.assistant-composer-label {
+  font-weight: 700;
+}
+
+.assistant-textarea {
+  width: 100%;
+  min-height: 6rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-background-deep);
+  color: var(--color-text-primary);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.assistant-textarea[aria-invalid="true"] {
+  border-color: var(--assistant-error);
+}
+
+.assistant-composer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.assistant-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.assistant-count--over {
+  color: var(--assistant-error);
+  font-weight: 700;
+}
+
+.assistant-composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.assistant-page .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 40rem) {
+  .assistant-page {
+    gap: var(--space-5);
+    padding-block: var(--space-5) var(--space-7);
+  }
+
+  .assistant-exchange,
+  .assistant-composer {
+    padding: var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-pending-dot {
+    animation: none;
+    opacity: 1;
+  }
+}

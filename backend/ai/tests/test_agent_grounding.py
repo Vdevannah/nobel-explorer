@@ -1,5 +1,7 @@
 """Regression cases for the revised deterministic answer checks (no LLM, no DB)."""
 
+import pytest
+
 from backend.ai.evaluation.grounding import (
     abstention_check,
     citation_support_review,
@@ -43,6 +45,65 @@ def test_abstention_with_citations_is_rejected():
 
 def test_answer_without_abstention_phrase_is_rejected():
     assert abstention_check("Sourdough uses a starter culture.", 0)["reason"] == "no abstention phrase"
+
+
+# ---------------------------------------------------------------- abstention, evaluator v3
+
+P4_R06 = ("Nobel Explorer’s knowledge base doesn’t contain a relevant explanation of sourdough fermentation, "
+          "so I can’t explain the process from the available evidence.")
+P4_R07 = ("Nobel Explorer’s database only covers prizes awarded through 2025, so it has no information on who won "
+          "the 2026 Chemistry Prize.")
+
+
+def test_real_p4_r06_out_of_scope_abstention_is_valid():
+    result = abstention_check(P4_R06, citation_count=0)
+    assert result["valid"] and result["kind"] == "insufficient_evidence"
+
+
+def test_real_p4_r07_coverage_abstention_is_valid():
+    result = abstention_check(P4_R07, citation_count=0)
+    assert result["valid"] and result["kind"] == "coverage"
+
+
+@pytest.mark.parametrize("answer, kind", [
+    ("The knowledge base does not include any relevant information about quantum computing.", "insufficient_evidence"),
+    ("I cannot answer that from the evidence Nobel Explorer returned.", "insufficient_evidence"),
+    ("Nobel Explorer found no matching records for that question.", "insufficient_evidence"),
+    ("That topic is outside the scope of Nobel Explorer.", "insufficient_evidence"),
+    ("The database only includes prizes up to 2025, so the 2027 laureates are not available.", "coverage"),
+    ("Nobel Explorer has no records for the 2026 Physics prize. Would you like an earlier year?", "coverage"),
+    ("The 2026 results are not yet in the database.", "coverage"),
+])
+def test_equivalent_abstentions_are_accepted(answer, kind):
+    result = abstention_check(answer, citation_count=0)
+    assert result["valid"] and result["kind"] == kind, result
+
+
+@pytest.mark.parametrize("answer", [
+    "There is no Nobel Prize in Mathematics. The 1950 Nobel Prize in Physics was awarded to Cecil Frank Powell.",
+    "Einstein did not receive the Nobel Prize for relativity.",
+    "I can't help with that.",
+    "No, she did not win twice.",
+    "Sourdough is fermented by wild yeast and lactic acid bacteria.",
+])
+def test_negative_statements_and_bare_refusals_are_not_abstentions(answer):
+    assert abstention_check(answer, citation_count=0)["reason"] == "no abstention phrase"
+
+
+@pytest.mark.parametrize("answer", [
+    "Nobel Explorer has no evidence about sourdough; sourdough uses wild yeast and lactic acid bacteria.",
+    "Nobel Explorer’s knowledge base doesn’t contain relevant information, but fermentation takes about 12 hours.",
+    "The database only covers prizes through 2025. The 2026 Chemistry prize went to Jane Doe.",
+    "The database only covers prizes through 2025, but the 2026 prize was never awarded.",
+    "Nobel Explorer has no information on the 2026 prize. However, it was awarded for battery research.",
+])
+def test_abstention_followed_by_unsupported_claims_is_rejected_v3(answer):
+    result = abstention_check(answer, citation_count=0)
+    assert not result["valid"] and result["reason"] == "abstention followed by claims", result
+
+
+def test_coverage_abstention_with_citations_is_rejected():
+    assert not abstention_check(P4_R07 + " [E1]", citation_count=1)["valid"]
 
 
 # ---------------------------------------------------------------- concept coverage (R07)

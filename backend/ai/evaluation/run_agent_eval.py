@@ -109,7 +109,7 @@ def execution_record(capture: dict[str, Any]) -> dict[str, Any]:
     return {"execution_sequence": sequence, "tool_results": tool_results, "evidence": evidence}
 
 
-EVALUATOR_VERSION = 2
+EVALUATOR_VERSION = 3
 
 
 def score_core(case: dict[str, Any], *, answer: str, status: str, calls: list[tuple[str, dict[str, Any]]],

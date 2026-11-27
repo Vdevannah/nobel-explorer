@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 
 import Navbar from "./components/layout/Navbar";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import AssistantPage from "./pages/AssistantPage";
 import CategoryPage from "./pages/CategoryPage";
 import HomePage from "./pages/HomePage";
 import LaureateDetailPage from "./pages/LaureateDetailPage";
@@ -27,6 +28,7 @@ function App() {
           <Route path="/laureates/:laureateId" element={<LaureateDetailPage />} />
           <Route path="/learn" element={<LearnPage />} />
           <Route path="/quiz" element={<QuizPage />} />
+          <Route path="/assistant" element={<AssistantPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

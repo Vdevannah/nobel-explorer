@@ -61,7 +61,7 @@ def test_correct_answer_scores_on_every_metric():
     row = score_case(CASE, _response("Carolyn R. Bertozzi [E1]"), _capture())
     assert row["tool_selection"] and row["argument_correctness"]  # "chemistry" normalised to "Chemistry"
     assert row["citation_validity"] and row["fact_presence"] and row["task_success"]
-    assert row["groundedness"] is None and row["evaluator_version"] == 2  # manual review, never automated
+    assert row["groundedness"] is None and row["evaluator_version"] == 3  # manual review, never automated
 
 
 def test_wrong_tool_and_arguments_detected():

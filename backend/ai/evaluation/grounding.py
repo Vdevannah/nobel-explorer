@@ -1,9 +1,12 @@
-"""Deterministic answer checks used by the revised (v2) agent evaluation.
+"""Deterministic answer checks used by the agent evaluation (evaluator v3).
 
 What these checks can and cannot do
 -----------------------------------
-* ``abstention_check``  - recognises a correct "I don't have evidence" answer,
-  but rejects it if the answer goes on to make claims (cited or not).
+* ``abstention_check``  - recognises a correct "I don't have evidence" answer
+  (out of scope / insufficient evidence) or a data-coverage answer ("the
+  database only covers prizes through 2025"), but rejects it if any clause goes
+  on to make claims (cited or not). v3 matches patterns instead of a fixed
+  phrase list and checks clauses, not just sentences.
 * ``concept_coverage``  - did the answer address each expected concept? Each
   concept is a group of acceptable terms, so a correct paraphrase passes
   ("solar cell ... semiconductor" covers the photovoltaic concept).
@@ -48,16 +51,64 @@ def _sentences(text: str) -> list[str]:
     return [s.strip() for s in _SENTENCES.split(text or "") if s.strip()]
 
 
+# Evaluator v3 abstention patterns. Each must mention missing/insufficient
+# evidence, information, records or data (or coverage limits): a bare refusal
+# ("I can't help with that") or a factual negation ("There is no Nobel Prize in
+# Mathematics", "Einstein did not win for relativity") is NOT an abstention.
+_EVIDENCE_NOUN = r"(?:evidence|information|explanation|details?|records?|data|content|material|results?)"
+INSUFFICIENT_EVIDENCE_PATTERNS = tuple(re.compile(p, re.IGNORECASE) for p in (
+    rf"\b(?:no|not any|not enough|insufficient|little)\s+(?:reliable\s+|relevant\s+|sufficient\s+|clear\s+|matching\s+)?{_EVIDENCE_NOUN}\b",
+    rf"\b(?:does not|doesn't|did not|didn't|do not|don't)\s+(?:contain|have|include|hold|return|find)\b[^.;]{{0,60}}?\b(?:relevant|reliable|matching|useful)\s+{_EVIDENCE_NOUN}",
+    rf"\b(?:can't|cannot|can not|unable to|not able to)\s+(?:answer|explain|describe|say|confirm|tell)\b[^.;]{{0,80}}?\b(?:evidence|records?|data|information|knowledge base|database|sources?)\b",
+    r"\bonly weakly related\b|\bweakly related material\b|\boutside (?:the )?scope\b|\boutside nobel explorer\b|\bnot covered\b",
+))
+COVERAGE_PATTERNS = tuple(re.compile(p, re.IGNORECASE) for p in (
+    r"\b(?:only\s+)?(?:covers?|includes?|contains?|goes)\b[^.;]{0,60}?\b(?:through|until|up to|to|ending in)\s+(?:18|19|20)\d{2}\b",
+    rf"\b(?:has|have|holds?|contains?)\s+no\s+{_EVIDENCE_NOUN}\s+(?:on|about|for|of)\b",
+    r"\bnot\s+(?:yet\s+)?(?:in|included in|available in|recorded in)\s+(?:the\s+|its\s+|nobel explorer.s\s+)?(?:database|records|data)\b",
+))
+# Clauses that may accompany an abstention: offers, redirects or questions, not claims.
+_REDIRECT = re.compile(r"\?$|^(?:i can|i could|you can|you could|would you|if you|nobel explorer (?:covers|can)|please)",
+                       re.IGNORECASE)
+_CLAUSES = re.compile(r"(?<=[.!?])\s+|\n+|;\s*|\s+(?:but|however)[,]?\s+", re.IGNORECASE)
+
+
+def _abstention_kind(clause: str) -> tuple[str | None, str | None]:
+    lowered = clause.lower()
+    legacy = next((p for p in ABSTENTION_PHRASES if p in lowered), None)
+    if legacy:
+        return "insufficient_evidence", legacy
+    for kind, patterns in (("coverage", COVERAGE_PATTERNS), ("insufficient_evidence", INSUFFICIENT_EVIDENCE_PATTERNS)):
+        for pattern in patterns:
+            match = pattern.search(clause)
+            if match:
+                return kind, match.group(0).lower()
+    return None, None
+
+
 def abstention_check(answer: str, citation_count: int) -> dict[str, Any]:
-    """Valid only if an abstention phrase is present AND nothing else is asserted."""
-    sentences = _sentences(answer)
-    lowered = (answer or "").lower()
-    phrase = next((p for p in ABSTENTION_PHRASES if p in lowered), None)
-    extra = [s for s in sentences if not any(p in s.lower() for p in ABSTENTION_PHRASES) and not _REDIRECT.search(s)]
+    """Valid only if an abstention is present AND no clause asserts anything else.
+
+    ``kind`` is "insufficient_evidence" (out of scope / nothing relevant found) or
+    "coverage" (records missing because of data coverage). Any clause that is not
+    an abstention or a redirect counts as an unsupported claim and invalidates it.
+    """
+    # Typographic apostrophes ("doesn’t") are common in model output.
+    text = _CITATION.sub("", answer or "").replace("\u2019", "'").replace("\u2018", "'")
+    clauses = [c.strip(" ,") for c in _CLAUSES.split(text) if c and c.strip(" ,.")]
+    kinds, phrase, extra = [], None, []
+    for clause in clauses:
+        kind, matched = _abstention_kind(clause)
+        if kind:
+            kinds.append(kind)
+            phrase = phrase or matched
+        elif not _REDIRECT.search(clause):
+            extra.append(clause)
+    kind = "coverage" if "coverage" in kinds else (kinds[0] if kinds else None)
     valid = phrase is not None and citation_count == 0 and not extra
     reason = ("ok" if valid else "no abstention phrase" if phrase is None
               else "abstention followed by cited claims" if citation_count else "abstention followed by claims")
-    return {"valid": valid, "phrase": phrase, "unsupported_sentences": extra, "reason": reason}
+    return {"valid": valid, "kind": kind, "phrase": phrase, "unsupported_sentences": extra, "reason": reason}
 
 
 def concept_coverage(answer: str, concepts: list[list[str]]) -> dict[str, Any]:

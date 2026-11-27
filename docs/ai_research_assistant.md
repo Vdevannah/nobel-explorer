@@ -1,6 +1,8 @@
-# AI Research Assistant — Retrieval (Phase 1), Tools (Phase 2) and Agent (Phase 3)
+# AI Research Assistant — Retrieval (Phase 1), Tools (Phase 2), Agent (Phase 3) and Frontend (Phase 4)
 
 > Local development feature. The AI research assistant is **not deployed**; the endpoint is disabled by default.
+> Phase 4 (React assistant, tests and real-model browser evaluation) is complete as an MVP; see
+> "Known MVP limitations" for accepted issues.
 
 ## Status: what exists and what does not
 
@@ -16,13 +18,18 @@
 | Four validated, read-only LangChain tools (`search_laureates`, `get_laureate_details`, `get_nobel_statistics`, `search_nobel_knowledge`) | **Implemented (Phase 2)** — directly invocable, no LLM |
 | Scripted tool evaluation (30 cases) | **Implemented (Phase 2)** — measures tool correctness, *not* LLM tool selection |
 | LangChain agent with dynamic tool calling, evidence ids and citation validation | **Implemented (Phase 3)** |
-| Real OpenAI model evaluation (gpt-6-luna, 10 questions) | **Done (Phase 3B/3C)**; prompt v3 not yet run on a real model |
+| Real OpenAI model evaluation (gpt-6-luna, 10 questions) | **Done (Phase 3B/3C)** |
+| Real-model browser evaluation of prompt v3 (9 questions) | **Done (Phase 4D.2)** |
+| Targeted real-model validation of prompt v4 (6 questions) | **Done (Phase 4E.2)**: the no-substitution rule was **not** followed; accepted as a known MVP limitation |
 | `POST /ai/chat` endpoint | **Implemented (Phase 3), local only** — disabled by default; not for public deployment |
-| Frontend assistant page | Planned (Phase 4) |
+| Frontend assistant page (`/assistant`, "Ask AI") with evidence cards, grounding notices and tool activity | **Implemented (Phase 4), local only** |
+| Permanent frontend tests (Vitest + React Testing Library) | **Implemented (Phase 4D.1)** |
+| Development-only fake agent server (real backend, scripted model) | **Implemented (Phase 4D.1)** |
 | Docker / Railway deployment of the AI stack | Planned (Phase 5) — Dockerfiles are unchanged |
 
 Phases 1–3 do not change existing routes, frontend, Dockerfiles or database
-schema; Phase 3 only registers the new `/ai/chat` router. LangChain and OpenAI
+schema; Phase 3 only registers the new `/ai/chat` router. Phase 4 adds the
+`/assistant` page and its navbar link; existing pages are unchanged. LangChain and OpenAI
 are imported lazily, so the application runs without AI packages.
 
 ## Architecture
@@ -463,6 +470,8 @@ detected. Real-model quality is measured only by the paid runs above.
 ```bash
 # Offline (no paid calls)
 set -a; . ./.env.docker; set +a; export DB_HOST=127.0.0.1 DB_PORT=9303 TOKENIZERS_PARALLELISM=false
+# Optional: if all-MiniLM-L6-v2 is already in the Hugging Face cache, avoid network update checks
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 .venv-ai/bin/python -m backend.ai.evaluation.run_agent_eval --mode fake --output ai_index/agent_eval_fake.json
 .venv-ai/bin/python -m backend.ai.evaluation.reevaluate_saved --stage1 ai_index/agent_eval_openai_stage1.json \
     --stage2 ai_index/agent_eval_openai_stage2_full.json --output ai_index/agent_eval_openai_offline_reeval_v2.json
@@ -476,10 +485,129 @@ AI_AGENT_ENABLED=true AI_ALLOW_PAID_EVAL=1 .venv-ai/bin/python -m backend.ai.eva
 
 ### Remaining work
 
-* Frontend assistant page (Phase 4); answers must be rendered as text, not HTML.
 * Before any public exposure: authentication, rate limiting, request-size limits, spend monitoring.
 * Deployment: CPU-only torch image, baked embedding model, warm-up at startup (avoids the 6 s cold start), read-only DB user.
-* Real-model evaluation of prompt v3 and of a larger question set; claim-level grounding review.
+* Invalid-category substitution is accepted as a known MVP limitation (see below); any future remedy would need its own real-model check.
+* A larger real-model question set; claim-level grounding review.
+
+## Phase 4: React assistant (`frontend/`) — local only
+
+### Frontend architecture
+
+`/assistant` (navbar "Ask AI") is a session-only page: nothing is stored in the browser and each question is
+answered independently (no conversation memory, no streaming).
+
+```
+AssistantPage            request state: one active request, AbortController, stale-response guard
+├─ SuggestedQuestions    fill the composer; never send
+├─ AssistantExchange ×n  one question and its outcome; all DOM ids prefixed by the exchange id
+│  ├─ ResponseStatusNotice   friendly text per status; provider/server diagnostics never shown
+│  ├─ AnswerText             escaped React text; citation buttons; **bold** only (see below)
+│  ├─ ResponseActions        Copy answer (original text, Clipboard API, honest failure message)
+│  ├─ GroundingBadge         backend grounding value + standing disclaimer; no confidence scores
+│  ├─ Limitations            backend limitations translated to plain language (unknown text shown only if prose-like)
+│  ├─ EvidenceList/Card      provenance labels, safe source links, related sources as text, profile links (new tab)
+│  └─ ToolActivity           collapsed; friendly tool names and allow-listed arguments only
+└─ AssistantComposer     1,000-character limit, Enter / Shift+Enter, IME-safe, Ask / Cancel / Clear
+```
+
+Pure helpers: `utils/assistantText.js` (citation tokens, emphasis), `utils/safeUrl.js` (absolute http(s) only,
+parsed with `URL`), `utils/assistantEvidence.js` (citations, grouping, grounding, limitations, tool activity).
+API client: `askResearchAssistant()` in `services/api.js` (one POST, no retries, typed result kinds).
+
+### Rendering rules
+
+* **No HTML or Markdown parser.** Answers are React text nodes. The only formatting is well-formed inline
+  `**bold**` (Phase 4E.1): the opening `**` must be followed and the closing `**` preceded by a non-space,
+  non-asterisk character, on one line, with no nested `**`. Anything else stays literal. Links, images,
+  headings and HTML are never interpreted. Copy answer copies the original text, including the asterisks.
+* Citation ids become buttons only when they match a citation returned for that exchange; they move focus
+  to the evidence card (re-expanding the evidence list first).
+* Only `source_linked` citations with a URL that passes `safeExternalUrl` become external links
+  (`target="_blank" rel="noopener noreferrer"`). Related sources are context text, never links.
+
+### Evidence grouping (Phase 4E.1, presentation only)
+
+The backend issues a new evidence id each time a tool returns a record, so the same record retrieved twice
+gets two ids (real example P4-R03: contribution 609 was cited as E4 and E9 from two `get_laureate_details`
+calls). The page shows such records as one card listing every id ("E4, E9"); each citation button focuses
+that card. Records are grouped only when **all** of these match: tool, evidence kind, the stable reference
+id for that kind (`laureate_id`, `contribution_id`, `connection_id`, `contribution_id`+`level`, statistic
+operation+filters+unit, or knowledge `doc_id`+`chunk_id`), provenance, title and every source field.
+Anything without a recognised identity stays separate. Backend ids, citations, counts and evaluation results
+are unchanged.
+
+### Extended-wait message (bug fixed in Phase 4E.1)
+
+After 8 seconds a pending answer shows "Some questions take longer while the research engine initializes or
+retrieves additional information." and announces it once. Phase 4D.2 found that the elapsed counter was reset
+in an effect *after* the first render of a new request, so a request following one that took 8 s or more
+briefly showed and announced the message (observed on P4-R04). The counter is now reset in the same state
+update that starts (and ends, cancels or clears) a request; a regression test fails on the old code.
+
+### Prompt versions
+
+| Version | Change |
+|---|---|
+| `2026-11-26.3` (Phase 3D) | Removed the Einstein-specific fact; corrections of false premises need evidence. Evaluated on a real model in Phase 4D.2. |
+| `2026-11-26.4` (Phase 4E.1) | The ok=false rule now says "fix the arguments once without changing what the user asked about". New rule: "When a question contains an invalid category or a false premise, correct it directly. Do not silently substitute a different category, person, year or question. Offer alternatives only when the user asks for them or they are clearly necessary, and label them as alternatives." Motivated by P4-R05 (a Mathematics question answered with the 1950 Physics laureate). **Real-model result (Phase 4E.2): not followed.** Both invalid-category questions were corrected and then answered with the Physics prize for the same year (V01 Mathematics 1950; V02 Computer Science 2020, one of three laureates). No regressions on the other four questions. |
+
+### Evaluator versions
+
+| Version | Change |
+|---|---|
+| v2 (Phase 3D) | Fixed abstention phrase list, concept coverage, lexical citation-support review. |
+| v3 (Phase 4E.1) | `abstention_check` matches patterns rather than a fixed list, distinguishes `insufficient_evidence` from `coverage` (missing records / data coverage), handles typographic apostrophes, and checks every clause (text after `;`, "but" or "however" counts), so a claim cannot hide behind an abstention phrase. Bare refusals and factual negations ("There is no Nobel Prize in Mathematics") are not abstentions. |
+
+Offline re-evaluation of the saved Phase 4D.2 answers (no model calls; answers unchanged):
+
+| Measure | Original (v2) | Revised (v3) |
+|---|---|---|
+| Expected abstentions recognised (P4-R06 out of scope, P4-R07 missing 2026 records) | 0/2 | 2/2 (kinds correct) |
+| False abstentions on the seven answer questions | 0/6 recorded (P4-R03 had no v2 check) | 0/7 |
+
+Re-evaluating the Phase 3 saved answers with v3 changes no metric (only the new `kind` field is added).
+Naming correction (Phase 4E.2): `reevaluate_saved.py` wrote its revised block as `revised_v2` even when
+`EVALUATOR_VERSION` was 3. The key is now `revised_v{EVALUATOR_VERSION}`; scoring is unchanged. The
+4E.1 artifact `agent_eval_openai_offline_reeval_v3.json` is kept as written; the correctly named copy is
+`agent_eval_openai_offline_reeval_v3_corrected.json` (identical values).
+
+Known evaluator v3 limits found in Phase 4E.2 (not changed): it rejects the valid abstention "its search
+results were weak matches and don't describe the process" (V06) as a claim, and the lexical support review
+misses spelled-out numbers ("three laureates", V02).
+These differences reflect the evaluator, not better model answers. Artifacts:
+`ai_index/agent_eval_openai_phase4d2_offline_reeval_v3.json`, `ai_index/agent_eval_openai_offline_reeval_v3.json`
+(originals unchanged).
+
+### Development-only fake agent server
+
+`python -m backend.ai.evaluation.fake_agent_server` runs the real application and `/ai/chat` with the real
+agent, tools, read-only MySQL, ChromaDB and validation, replacing only the model's decisions with the Phase 3
+scripted plans. It binds to loopback only, removes `OPENAI_API_KEY` from its process, refuses to build a real
+client, and answers unsupported questions with 503. It is never imported by `backend.main`.
+
+### Local frontend commands
+
+```bash
+cd frontend
+npm test              # Vitest + React Testing Library, single run
+npm run build
+VITE_API_BASE_URL=http://127.0.0.1:8000 npx vite --host 127.0.0.1
+```
+
+### Known MVP limitations (accepted at the end of Phase 4)
+
+* **Invalid-category substitution.** Asked about a category that does not exist (Mathematics 1950,
+  Computer Science 2020), `gpt-6-luna` correctly says there is no such Nobel Prize but then volunteers the
+  Physics prize for the same year without labelling it as an alternative (P4-R05, V01, V02). The extra
+  sentence is factually correct and validly cited, but it answers a question that was not asked, and in V02
+  it named only one of three laureates (the truncation is shown as a limitation). Prompt v4's explicit rule
+  did not change this. No guardrail was added; the behaviour is documented rather than fixed.
+* **Evaluator v3 limits.** One valid abstention (V06) is scored invalid, and the lexical support review
+  misses spelled-out numbers. Claim-level grounding remains a manual judgement.
+* **Scope.** Local only (no authentication, rate limiting, spend monitoring or deployment); session-only
+  history; only `**bold**` is rendered; duplicate evidence ids are grouped in the UI, not in the backend;
+  the first knowledge search after a server start takes about 5 s.
 
 ## Tests
 
@@ -487,17 +615,21 @@ Distinct tests (each counted once even when run in two environments):
 
 | Suite | Distinct tests | Result |
 |---|---|---|
-| AI unit tests (`backend/ai/tests`, SQLite fixtures, fake embedder and fake chat model) | 377 | 377 passed (`.venv-ai`) |
+| Frontend unit and component tests (`frontend/src/**/*.test.*`, Vitest + RTL, jsdom) | 274 | 274 passed |
+| AI unit tests (`backend/ai/tests`, SQLite fixtures, fake embedder and fake chat model) | 432 | 432 passed (`.venv-ai`) |
 | Integration: real all-MiniLM-L6-v2 + live read-only MySQL (opt-in) | 18 | 18 passed |
 | Paid real-LLM test (opt-in, needs approval) | 1 | not run |
 | Existing backend/ETL regression suite (isolated `nobel_explorer_ai_test`) | 297 | 297 passed in `.venv` and `.venv-ai` |
 
-The base `.venv` (no AI packages) runs 166 of the AI unit tests and skips the
-rest cleanly, proving the application works without AI dependencies.
+The base `.venv` (no AI packages) runs 186 of the AI unit tests and skips the
+rest cleanly, proving the application works without AI dependencies. Total distinct
+permanent tests: 274 frontend + 432 AI unit + 18 integration + 297 backend/ETL = 1,021
+(paid test excluded). Counts as of Phase 4E.2.
 
 Evaluations: Phase 2 tool evaluation 30/30; agent fake-model evaluation 32 cases,
 every automated metric 32/32, 3/3 negative controls detected (deterministic,
-not LLM accuracy); real-model results in the Phase 3 section.
+not LLM accuracy); real-model results in the Phase 3 section and in
+`docs/ai_agent_evaluation_summary.md` (Phase 4D.2).
 
 ## Reproduce
 
@@ -564,6 +696,16 @@ the first knowledge-tool call in a process loads it (≈4–5 s), later calls ta
   * Evidence ids follow tool completion order for parallel calls.
   * The first knowledge search in a process pays a ~6 s embedding-model cold start.
   * The endpoint has no authentication, rate limiting or request-size limit and must stay local.
+* Phase 4 frontend and evaluation:
+  * The assistant is local only: no authentication, rate limiting or spend monitoring; not deployed.
+  * The conversation is lost when the page is left or reloaded (by design: no persistent history).
+  * Only `**bold**` is rendered; other Markdown a model may produce appears literally.
+  * Evidence grouping is presentation only; the backend still issues duplicate ids for repeated records.
+  * Real-model browser evidence covers nine questions on prompt v3 and six on prompt v4 (one run each);
+    prompt v4's no-substitution rule was not followed for invalid categories. Grounding labels describe citations, not factual correctness.
+  * ChromaDB appends a row to its internal `acquire_write` lock table whenever a client opens the index;
+    indexed documents and embeddings do not change.
+  * jsdom cannot evaluate the CSS cascade for `[hidden]`; real rendering is checked in Chrome.
 * Each tool call opens a short-lived read-only engine (NullPool); fine for an
   assistant, not tuned for high request rates.
 * The local Homebrew MySQL on port 3306 rejects the `.env` credentials
