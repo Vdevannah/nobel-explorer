@@ -29,6 +29,11 @@ describe("assistant.css", () => {
     },
   );
 
+  it("stops the welcome illustration's motion for reduced-motion users", () => {
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduced).toMatch(/\.assistant-atom-orbits,\s*\.assistant-network-node\s*\{\s*animation:\s*none/);
+  });
+
   it("disables the pending animation for reduced-motion users", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.assistant-pending-dot\s*\{[^}]*animation:\s*none/);
   });

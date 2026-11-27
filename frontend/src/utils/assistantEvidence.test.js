@@ -8,6 +8,8 @@ import {
   friendlyLimitations,
   GENERIC_LIMITATION,
   groupEvidence,
+  knowledgeKind,
+  looksLikeAbstention,
   laureateIdOf,
   normalizeCitations,
   normalizeToolCalls,
@@ -37,7 +39,7 @@ describe("normalizeCitations", () => {
 
     const [explanation] = normalizeCitations(fixtures["real-r03"].citations);
     expect(explanation).toMatchObject({
-      provenance: { key: "unverified_educational", label: "Nobel Explorer educational content" },
+      provenance: { key: "unverified_educational", label: "Educational explanation" },
       relatedSourceName: "The Nobel Prize in Chemistry 2022 – Summary",
       source: null,
     });
@@ -128,7 +130,7 @@ describe("limitations", () => {
     ["Results were truncated: search_laureates returned 10 of 25 matches.", ["Only some of the matching records were used (10 of 25)."]],
     ["No educational explanations are stored for Marie Curie.", ["Nobel Explorer has no detailed educational explanations for Marie Curie."]],
     ["Cited explanations are unverified educational content without stored citations; related sources are context only.",
-      ["Some cited explanations are Nobel Explorer educational content that has not been independently verified. Related sources are shown for context only."]],
+      ["Educational explanations are Nobel Explorer's own teaching content and have no stored external citation. Related sources are shown for context only."]],
     ["Removed citation references not backed by tool evidence: E7. Statements marked [unverified] are not supported by retrieved evidence.",
       ["Some citation references did not match the retrieved evidence and were removed. Statements marked [unverified] are not supported by the evidence found."]],
     ["Removed 2 URL(s) that no tool returned (shown as [link removed]).",
@@ -326,4 +328,38 @@ describe("groupEvidence", () => {
   it.each([null, undefined, "x"])("returns [] for %j", (value) => {
     expect(groupEvidence(value)).toEqual([]);
   });
+});
+
+describe("general-knowledge classification", () => {
+  it.each([
+    "Nobel Explorer’s database only covers prizes awarded through 2025, so it has no information on who won the 2026 Chemistry Prize.",
+    "Nobel Explorer has no reliable evidence about sourdough fermentation; its search returned only weakly related material.",
+    "Nobel Explorer’s knowledge base doesn’t contain a relevant explanation of that, so I can’t explain it from the available evidence.",
+    "That question is outside the scope of Nobel Explorer.",
+    "I cannot answer questions about current events.",
+  ])("recognises abstention %#", (answer) => {
+    expect(looksLikeAbstention(answer)).toBe(true);
+    expect(knowledgeKind(answer, "no_evidence")).toBeNull();
+  });
+
+  it.each([
+    ["There is no Nobel Prize in Mathematics. The six categories are Chemistry, Economic Sciences, Literature, Peace, Physics and Physiology or Medicine.", "no_evidence"],
+    ["Photosynthesis converts light energy into chemical energy stored in sugars.", "uncited"],
+  ])("marks an uncited non-abstention answer as general (%#)", (answer, grounding) => {
+    expect(knowledgeKind(answer, grounding)).toBe("general");
+  });
+
+  it("detects a mixed answer only when a substantial paragraph has no citation", () => {
+    const cited = "Karikó and Weissman shared the 2023 prize [E1][E2].";
+    expect(knowledgeKind(`${cited}\n\nVaccines train the immune system to recognise a pathogen safely.`, "cited")).toBe("mixed");
+    expect(knowledgeKind(`${cited} They modified nucleosides [E4].`, "cited")).toBeNull();
+    expect(knowledgeKind(`${cited}\n\nShort aside.`, "cited")).toBeNull();
+    expect(knowledgeKind(`First paragraph cites [E1].\n\nSecond paragraph also cites evidence here [E2].`, "cited")).toBeNull();
+  });
+
+  it.each([[null, "uncited"], ["", "no_evidence"], ["Some answer text that is long enough.", null], ["Some answer text.", "mystery"]])(
+    "returns null for %j / %j", (answer, grounding) => {
+      expect(knowledgeKind(answer, grounding)).toBeNull();
+    },
+  );
 });

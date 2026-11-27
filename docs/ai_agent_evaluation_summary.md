@@ -189,3 +189,13 @@ the cited record. Six questions do not establish general accuracy.
 Invalid-category substitution (P4-R05, V01, V02) is accepted as a known MVP limitation and documented; no
 guardrail or further prompt change was made. Across Phase 4, 15 real-model browser questions were run once
 each (9 on prompt v3, 6 on prompt v4) for an estimated $0.00366899 in total.
+
+## Nobel Intelligence MVP (prompt `2026-11-27.3`)
+
+After Phase 4E.2 the prompt was refined three times (`2026-11-27.1`–`.3`): direct educational answers without
+retrieval commentary, a bounded general-scientific-knowledge fallback for science questions the knowledge base
+does not cover, and readable formatting (bullets, Unicode formulas). These versions passed the deterministic
+prompt tests and the scripted evaluation (32/32, 3/3 negative controls) but have **not** been evaluated with a
+real model; the real-model results above apply to prompts `2026-11-26.3` and `.4`. With the fallback, some
+questions that previously ended in an abstention (for example general science such as sourdough fermentation)
+may now receive an uncited general-knowledge answer, marked in the interface.

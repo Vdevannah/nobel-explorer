@@ -5,22 +5,12 @@ import { displayHost } from "../../utils/safeUrl";
 // One normalised citation (see normalizeCitations). Only a direct source URL
 // that passed safeExternalUrl becomes an external link; related sources are
 // context text only and never linked.
-function EvidenceCard({ card, domId }) {
-  const { id, title, provenance, sourceName, source, relatedSourceName, laureateId } = card;
-  const ids = card.ids?.length ? card.ids : [id];
+function EvidenceCard({ card, domId, supports = [] }) {
+  const { title, provenance, sourceName, source, relatedSourceName, laureateId } = card;
 
   return (
     <li className={`assistant-evidence-card assistant-evidence-card--${provenance.key}`} id={domId} tabIndex={-1}>
-      <div className="assistant-evidence-card-header">
-        <span className="assistant-evidence-id">{ids.join(", ")}</span>
-        <span className="assistant-evidence-title">{title}</span>
-      </div>
-
-      {ids.length > 1 && (
-        <p className="assistant-evidence-grouped">
-          Cited as {ids.slice(0, -1).join(", ")} and {ids.at(-1)}: the same record was returned more than once.
-        </p>
-      )}
+      <p className="assistant-evidence-title">{title}</p>
 
       <p className="assistant-provenance">{provenance.label}</p>
 
@@ -49,7 +39,7 @@ function EvidenceCard({ card, domId }) {
 
       {provenance.key === "unverified_educational" && (
         <>
-          <p className="assistant-evidence-warning">Not independently verified</p>
+          <p className="assistant-evidence-meta">Nobel Explorer teaching content; no stored external citation</p>
           {relatedSourceName && (
             <p className="assistant-related-context">Related context: {relatedSourceName}</p>
           )}
@@ -58,6 +48,15 @@ function EvidenceCard({ card, domId }) {
 
       {provenance.key === "unknown" && (
         <p className="assistant-evidence-warning">Provenance was not provided for this evidence.</p>
+      )}
+
+      {supports.length > 0 && (
+        <div className="assistant-supports">
+          <p className="assistant-supports-label">Supports</p>
+          <ul>
+            {supports.map((claim) => <li key={claim}>{claim}</li>)}
+          </ul>
+        </div>
       )}
 
       {laureateId !== null && (

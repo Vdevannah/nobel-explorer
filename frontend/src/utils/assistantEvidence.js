@@ -2,6 +2,7 @@
 // function tolerates missing or malformed fields and never throws.
 // Field names follow backend/ai/agent/schemas.py (Citation, ToolCallSummary).
 
+import { tokenizeAnswer } from "./assistantText";
 import { safeExternalUrl } from "./safeUrl";
 
 const EVIDENCE_ID = /^E\d{1,6}$/;
@@ -22,7 +23,8 @@ const text = (value) => (typeof value === "string" ? value.trim() : "");
 const PROVENANCE = {
   structured_record: { key: "structured_record", label: "Nobel Explorer database record" },
   source_linked: { key: "source_linked", label: "Linked source" },
-  unverified_educational: { key: "unverified_educational", label: "Nobel Explorer educational content" },
+  // Neutral label; the card and the Sources notice still state that there is no stored external citation.
+  unverified_educational: { key: "unverified_educational", label: "Educational explanation" },
 };
 const UNKNOWN_PROVENANCE = { key: "unknown", label: "Source not specified" };
 
@@ -231,7 +233,7 @@ const LIMITATION_RULES = [
   [/^No educational explanations are stored for (.{1,200})\.$/s,
     (m) => [`Nobel Explorer has no detailed educational explanations for ${m[1]}.`]],
   [/^Cited explanations are unverified educational content/,
-    () => ["Some cited explanations are Nobel Explorer educational content that has not been independently verified. Related sources are shown for context only."]],
+    () => [EDUCATIONAL_PROVENANCE_NOTICE]],
   [/^Removed citation references not backed by tool evidence/,
     () => ["Some citation references did not match the retrieved evidence and were removed. Statements marked [unverified] are not supported by the evidence found."]],
   [/^Removed \d+ URL\(s\) that no tool returned/,
@@ -280,6 +282,13 @@ export function friendlyLimitations(limitations) {
 
 // ---------------------------------------------------------------- grounding
 
+// Provenance notice for answers that cite educational explanations. Shown in the
+// collapsed Sources panel rather than under the answer; meaning is unchanged.
+export const EDUCATIONAL_PROVENANCE_NOTICE =
+  "Educational explanations are Nobel Explorer's own teaching content and have no stored external citation. "
+  + "Related sources are shown for context only.";
+
+export const ACCURACY_DISCLAIMER = "AI-generated answers may contain errors.";
 export const CITATION_DISCLAIMER =
   "Citations indicate referenced information but do not guarantee factual correctness.";
 
@@ -310,6 +319,61 @@ const GROUNDING = {
 export function describeGrounding(grounding) {
   return lookup(GROUNDING, grounding) ?? null;
 }
+
+// ------------------------------------------------- general scientific knowledge
+//
+// Prompt 2026-11-27.2 lets the model answer relevant science questions from general
+// knowledge when retrieved evidence does not cover them; such statements carry no
+// citations. These helpers decide which subtle note to show under an answer:
+//   "general": no valid citations and not an abstention
+//   "mixed":   cited answer with at least one substantial paragraph without citations
+// Abstentions ("Nobel Explorer has no records for 2026 ...") keep the normal warnings.
+
+export const GENERAL_KNOWLEDGE_NOTE = "General scientific knowledge · No retrieved source";
+export const MIXED_KNOWLEDGE_NOTE = "Partly sourced · Some statements use general scientific knowledge";
+
+const ABSTENTION_HINT = new RegExp([
+  String.raw`\b(?:no|not any)\s+(?:reliable\s+|relevant\s+|matching\s+)?(?:record|records|information|evidence|data|explanation)\b`,
+  String.raw`\bhas no information\b`,
+  String.raw`\b(?:does not|doesn't|do not|don't)\s+(?:have|contain|include)\b[^.]{0,60}\b(?:record|records|information|evidence|explanation|data)\b`,
+  String.raw`\bonly covers?\b`,
+  String.raw`\bcovers?\b[^.]{0,40}\b(?:through|until|up to)\s+\d{4}\b`,
+  String.raw`\b(?:can't|cannot|unable to)\s+(?:answer|explain|help|confirm)\b`,
+  String.raw`\boutside (?:the )?scope\b`,
+  String.raw`\bnot (?:able|confident)\b`,
+].join("|"), "i");
+const MAX_ABSTENTION_CHARS = 400;
+const MIN_GENERAL_PARAGRAPH_CHARS = 40;
+
+export function looksLikeAbstention(answer) {
+  const value = text(answer).replace(/[\u2018\u2019]/g, "'");
+  return Boolean(value) && value.length <= MAX_ABSTENTION_CHARS && ABSTENTION_HINT.test(value);
+}
+
+const hasCitation = (paragraph) => tokenizeAnswer(paragraph).some((token) => token.type === "citations");
+
+/** "general", "mixed" or null for an answer and its backend grounding value. */
+export function knowledgeKind(answer, grounding) {
+  const value = text(answer);
+  if (!value || looksLikeAbstention(value)) return null;
+  if (grounding === "uncited" || grounding === "no_evidence") return "general";
+  if (grounding === "cited" || grounding === "partially_cited") {
+    const paragraphs = value.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
+    const uncited = paragraphs.some((item) => item.length >= MIN_GENERAL_PARAGRAPH_CHARS && !hasCitation(item)
+      && !looksLikeAbstention(item));
+    return paragraphs.length > 1 && uncited ? "mixed" : null;
+  }
+  return null;
+}
+
+// Limitations that only restate "no matching evidence"; the general-knowledge note
+// already says this, so they are hidden for general answers.
+export const RESTATES_NO_MATCH = new Set([
+  "No supporting evidence was retrieved, so this answer is not based on Nobel Explorer data.",
+  "The answer does not reference any of the evidence that was retrieved.",
+  "The available Nobel Explorer content may not closely match this question, so it was treated as insufficient evidence.",
+  "No related educational or scientific content was found.",
+]);
 
 // ---------------------------------------------------------------- tool calls
 

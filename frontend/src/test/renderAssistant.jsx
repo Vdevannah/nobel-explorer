@@ -10,10 +10,10 @@ import AssistantPage from "../pages/AssistantPage";
 // Under fake timers use askNow(): user-event goes through Testing Library's
 // async wrapper, which waits on a real setTimeout and only advances fake
 // timers when a global "jest" exists, so it would hang under Vitest.
-export function renderAssistant() {
+export function renderAssistant({ path = "/assistant" } = {}) {
   const user = userEvent.setup();
   const view = render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <AssistantPage />
     </MemoryRouter>,
   );

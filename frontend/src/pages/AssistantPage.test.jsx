@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createChatServer } from "../test/chatServer";
@@ -8,10 +8,8 @@ import { renderAssistant } from "../test/renderAssistant";
 const CANCEL_TEXT = "Stopped waiting; the server may still finish this request.";
 const WAIT_TEXT = "Some questions take longer while the research engine initializes or retrieves additional information.";
 const SUGGESTIONS = [
-  "Who won the 2022 Chemistry prize?",
-  "Explain click chemistry in simple terms.",
   "Who won the 2023 Medicine prize and what did they discover?",
-  "How do solar cells convert sunlight into electricity?",
+  "Explain click chemistry in simple terms.",
   "Which three birth countries have the most Nobel laureates?",
   "Why did Albert Einstein receive the Nobel Prize?",
 ];
@@ -30,18 +28,41 @@ afterEach(() => {
 });
 
 describe("initial page", () => {
-  it("renders the heading, coverage notice, suggestions and an empty composer without requests", () => {
+  it("renders a minimal page: title, one subtitle, four suggestions and the composer, with no disclaimer below the input", () => {
     const { textarea, askButton } = renderAssistant();
-    expect(screen.getByRole("heading", { level: 1, name: "AI Research Assistant" })).toBeInTheDocument();
-    expect(screen.getByText(/Nobel Explorer currently covers Nobel Prize records from 1901–2025\./)).toBeInTheDocument();
-    expect(screen.getByText(/AI-generated answers may contain errors\./)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Nobel Intelligence" })).toBeInTheDocument();
+    expect(screen.getByText("Discover the people, ideas and science that changed our world.")).toBeInTheDocument();
+    expect(screen.queryByText(/Nobel Explorer currently covers Nobel Prize records/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/AI-generated answers may contain errors/)).not.toBeInTheDocument();
     const suggestions = within(screen.getByRole("region", { name: "Try a question" })).getAllByRole("button");
     expect(suggestions.map((b) => b.textContent)).toEqual(SUGGESTIONS);
     expect(textarea()).toHaveValue("");
-    expect(screen.getByText("0 / 1,000 characters")).toBeInTheDocument();
+    expect(textarea()).toHaveAccessibleDescription(/Press Enter to ask, Shift\+Enter for a new line\. 0 \/ 1,000 characters/);
+    expect(screen.getByText("0 / 1,000 characters")).toHaveClass("visually-hidden");
     expect(askButton()).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Clear conversation" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Clear conversation" })).not.toBeInTheDocument();
     expect(server.fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the decorative illustration throughout; the page switches to the compact conversation layout", async () => {
+    const { user, ask } = renderAssistant();
+    const art = () => document.querySelector(".assistant-welcome-art");
+    const page = () => document.querySelector(".assistant-page");
+    expect(art()).toHaveAttribute("aria-hidden", "true");
+    expect(page()).not.toHaveClass("assistant-page--active");
+    await ask("Who won?");
+    expect(art()).toBeInTheDocument();
+    expect(page()).toHaveClass("assistant-page--active"); // scaled to 65% by assistant.css
+    await user.click(screen.getByRole("button", { name: "Clear conversation" }));
+    expect(art()).toBeInTheDocument();
+    expect(page()).not.toHaveClass("assistant-page--active");
+  });
+
+  it("hides the suggestions once a conversation starts and shows Clear conversation", async () => {
+    const { ask } = renderAssistant();
+    await ask("Who won?");
+    expect(screen.queryByRole("region", { name: "Try a question" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear conversation" })).toBeEnabled();
   });
 
   it("does not use browser storage", () => {
@@ -75,6 +96,7 @@ describe("composer", () => {
     await user.paste("x".repeat(1000));
     expect(askButton()).toBeEnabled();
     expect(screen.getByText("1,000 / 1,000 characters")).toBeInTheDocument();
+    expect(screen.getByText("1,000 / 1,000 characters")).not.toHaveClass("visually-hidden"); // shown near the limit
     await user.paste("y");
     expect(askButton()).toBeDisabled();
     expect(textarea()).toHaveAttribute("aria-invalid", "true");
@@ -202,7 +224,7 @@ describe("request lifecycle", () => {
     expect(vi.getTimerCount()).toBeGreaterThan(0);
     server.last.respond(200, fixtures["real-r04"]);
     await settle();
-    expect(screen.getByText(/Katalin Karikó and Drew Weissman shared/)).toBeInTheDocument();
+    expect(document.querySelector(".assistant-answer-text")).toHaveTextContent(/Katalin Karikó and Drew Weissman shared/);
     expect(document.querySelector(".assistant-pending")).toBeNull();
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -289,7 +311,7 @@ describe("request lifecycle", () => {
     await ask("Who won?");
     await user.type(textarea(), "Follow-up");
     server.last.respond(200, fixtures["real-r04"]);
-    expect(await screen.findByText(/Katalin Karikó and Drew Weissman shared/)).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector(".assistant-answer-text")).toHaveTextContent(/Katalin Karikó and Drew Weissman shared/));
     expect(textarea()).toHaveFocus();
     expect(textarea()).toHaveValue("Follow-up");
   });

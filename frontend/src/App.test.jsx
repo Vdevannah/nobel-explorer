@@ -46,7 +46,7 @@ describe("application shell", () => {
     ["/analytics", "Analytics are temporarily unavailable."], // the failed request leads to its error state
     ["/learn", "Learn Nobel-winning science at your level."],
     ["/quiz", "Test your knowledge"],
-    ["/assistant", "AI Research Assistant"],
+    ["/assistant", "Nobel Intelligence"],
     ["/no-such-page", "This discovery is still waiting to be made."],
   ])("renders %s without crashing", async (path, heading) => {
     renderAt(path);
@@ -58,7 +58,7 @@ describe("application shell", () => {
     const user = userEvent.setup();
     renderAt("/");
     await user.click(screen.getByRole("link", { name: "Ask AI" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "AI Research Assistant" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Nobel Intelligence" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ask AI" })).toHaveAttribute("aria-current", "page");
     expect(aiCalls()).toHaveLength(0);
   });

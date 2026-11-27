@@ -2,7 +2,7 @@
 function SuggestedQuestions({ questions, onSelect }) {
   return (
     <section className="assistant-suggestions" aria-labelledby="assistant-suggestions-heading">
-      <h2 className="assistant-subheading" id="assistant-suggestions-heading">Try a question</h2>
+      <h2 className="visually-hidden" id="assistant-suggestions-heading">Try a question</h2>
       <ul>
         {questions.map((question) => (
           <li key={question}>

@@ -22,7 +22,7 @@
 | Real-model browser evaluation of prompt v3 (9 questions) | **Done (Phase 4D.2)** |
 | Targeted real-model validation of prompt v4 (6 questions) | **Done (Phase 4E.2)**: the no-substitution rule was **not** followed; accepted as a known MVP limitation |
 | `POST /ai/chat` endpoint | **Implemented (Phase 3), local only** — disabled by default; not for public deployment |
-| Frontend assistant page (`/assistant`, "Ask AI") with evidence cards, grounding notices and tool activity | **Implemented (Phase 4), local only** |
+| "Nobel Intelligence" assistant page (`/assistant`, navbar "Ask AI"): learner-focused answers, collapsible Sources, general-knowledge notes | **Implemented (Phase 4), local only** |
 | Permanent frontend tests (Vitest + React Testing Library) | **Implemented (Phase 4D.1)** |
 | Development-only fake agent server (real backend, scripted model) | **Implemented (Phase 4D.1)** |
 | Docker / Railway deployment of the AI stack | Planned (Phase 5) — Dockerfiles are unchanged |
@@ -490,48 +490,78 @@ AI_AGENT_ENABLED=true AI_ALLOW_PAID_EVAL=1 .venv-ai/bin/python -m backend.ai.eva
 * Invalid-category substitution is accepted as a known MVP limitation (see below); any future remedy would need its own real-model check.
 * A larger real-model question set; claim-level grounding review.
 
-## Phase 4: React assistant (`frontend/`) — local only
+## Phase 4: Nobel Intelligence — React assistant (`frontend/`), local only
+
+### Branding and audience
+
+The assistant page is called **Nobel Intelligence** ("Discover the people, ideas and science that changed our
+world."). The navbar label stays **Ask AI** and the route stays `/assistant`. The audience is students,
+educators and curious learners, so the page hides engineering detail (evidence ids, tool activity) while the
+backend keeps every citation, provenance field and tool record unchanged.
 
 ### Frontend architecture
 
-`/assistant` (navbar "Ask AI") is a session-only page: nothing is stored in the browser and each question is
-answered independently (no conversation memory, no streaming).
+`/assistant` is a session-only page: nothing is stored in the browser and each question is answered
+independently (no conversation memory, no streaming).
 
 ```
-AssistantPage            request state: one active request, AbortController, stale-response guard
-├─ SuggestedQuestions    fill the composer; never send
+AssistantPage            request state: one active request, AbortController, stale-response guard; ?debug flag
+├─ header                WelcomeIllustration (golden atom + knowledge network; full size on the welcome
+│                        screen, 65% during a conversation; slow CSS animation, off for reduced motion),
+│                        "Nobel Intelligence" title (purple), one-line subtitle
+├─ SuggestedQuestions    four suggestions, welcome screen only; fill the composer, never send
 ├─ AssistantExchange ×n  one question and its outcome; all DOM ids prefixed by the exchange id
 │  ├─ ResponseStatusNotice   friendly text per status; provider/server diagnostics never shown
-│  ├─ AnswerText             escaped React text; citation buttons; **bold** only (see below)
-│  ├─ ResponseActions        Copy answer (original text, Clipboard API, honest failure message)
-│  ├─ GroundingBadge         backend grounding value + standing disclaimer; no confidence scores
-│  ├─ Limitations            backend limitations translated to plain language (unknown text shown only if prose-like)
-│  ├─ EvidenceList/Card      provenance labels, safe source links, related sources as text, profile links (new tab)
-│  └─ ToolActivity           collapsed; friendly tool names and allow-listed arguments only
-└─ AssistantComposer     1,000-character limit, Enter / Shift+Enter, IME-safe, Ask / Cancel / Clear
+│  ├─ AnswerText             escaped React text; evidence ids hidden; **bold** only; [unverified] markers kept
+│  ├─ AnswerNotes            general-knowledge note, partial-sourcing note, warnings and plain-language limitations
+│  ├─ ResponseActions        copy icon (copies the text as shown, without ids or ** markers)
+│  ├─ EvidenceList/Card      collapsed "Sources (n)": provenance label, safe source links, profile links (new tab),
+│  │                         and "Supports": the answer statements each source backs; accuracy disclaimer inside
+│  └─ ToolActivity           only with /assistant?debug (debugging and evaluation)
+└─ AssistantComposer     rounded input, 1,000-character limit, Enter / Shift+Enter, IME-safe, Ask / Cancel / Clear
 ```
 
-Pure helpers: `utils/assistantText.js` (citation tokens, emphasis), `utils/safeUrl.js` (absolute http(s) only,
-parsed with `URL`), `utils/assistantEvidence.js` (citations, grouping, grounding, limitations, tool activity).
-API client: `askResearchAssistant()` in `services/api.js` (one POST, no retries, typed result kinds).
+Pure helpers: `utils/assistantText.js` (citation tokens, emphasis, `stripCitations`, `plainAnswerText`,
+`claimsByEvidence`), `utils/safeUrl.js` (absolute http(s) only, parsed with `URL`), `utils/assistantEvidence.js`
+(citations, grouping, grounding, limitations, knowledge notes, tool activity). API client: `askResearchAssistant()`
+in `services/api.js` (one POST, no retries, typed result kinds).
 
 ### Rendering rules
 
 * **No HTML or Markdown parser.** Answers are React text nodes. The only formatting is well-formed inline
-  `**bold**` (Phase 4E.1): the opening `**` must be followed and the closing `**` preceded by a non-space,
-  non-asterisk character, on one line, with no nested `**`. Anything else stays literal. Links, images,
-  headings and HTML are never interpreted. Copy answer copies the original text, including the asterisks.
-* Citation ids become buttons only when they match a citation returned for that exchange; they move focus
-  to the evidence card (re-expanding the evidence list first).
+  `**bold**`: the opening `**` must be followed and the closing `**` preceded by a non-space, non-asterisk
+  character, on one line, with no nested `**`. Anything else stays literal. Bullet lines ("- ") display as
+  written. Links, images, headings and HTML are never interpreted.
+* **Evidence ids are hidden** in the answer text (`stripCitations`). The claim-to-source association is shown
+  inside each source card as "Supports" (`claimsByEvidence`: sentences that cite that evidence id; a
+  citation-only fragment belongs to the sentence before it). Validation markers `[unverified]` and
+  `[link removed]` remain visible.
+* **Provenance labels:** "Nobel Explorer database record", "Linked source", "Educational explanation"
+  (neutral; the card adds "Nobel Explorer teaching content; no stored external citation"), and "Source not
+  specified" for unknown provenance. The educational-provenance notice appears inside Sources, not under the
+  answer. Nothing is labelled as verified.
 * Only `source_linked` citations with a URL that passes `safeExternalUrl` become external links
   (`target="_blank" rel="noopener noreferrer"`). Related sources are context text, never links.
+
+### Answer notes (under the answer)
+
+| Situation (frontend `knowledgeKind`) | Note |
+|---|---|
+| No valid citations and not an abstention (`uncited` / `no_evidence`) | ⓘ General scientific knowledge · No retrieved source |
+| Cited answer with a substantial paragraph without citations | ⓘ Partly sourced · Some statements use general scientific knowledge |
+| Fully cited answer | none (the Sources link is shown) |
+| Abstention (for example "the database only covers prizes through 2025") | the existing warnings |
+| `partially_cited` (invalid citations removed) | "Some references could not be validated" warning |
+
+Abstentions are recognised with a short pattern check (`looksLikeAbstention`); unusual wording may be
+classified as general knowledge. Real problems (failed tool calls, truncated results) are always listed.
 
 ### Evidence grouping (Phase 4E.1, presentation only)
 
 The backend issues a new evidence id each time a tool returns a record, so the same record retrieved twice
 gets two ids (real example P4-R03: contribution 609 was cited as E4 and E9 from two `get_laureate_details`
-calls). The page shows such records as one card listing every id ("E4, E9"); each citation button focuses
-that card. Records are grouped only when **all** of these match: tool, evidence kind, the stable reference
+calls). The page shows such records as one source card whose "Supports" list merges the statements of
+every grouped id. Records are grouped only when **all** of these match: tool, evidence kind, the stable reference
 id for that kind (`laureate_id`, `contribution_id`, `connection_id`, `contribution_id`+`level`, statistic
 operation+filters+unit, or knowledge `doc_id`+`chunk_id`), provenance, title and every source field.
 Anything without a recognised identity stays separate. Backend ids, citations, counts and evaluation results
@@ -551,6 +581,12 @@ update that starts (and ends, cancels or clears) a request; a regression test fa
 |---|---|
 | `2026-11-26.3` (Phase 3D) | Removed the Einstein-specific fact; corrections of false premises need evidence. Evaluated on a real model in Phase 4D.2. |
 | `2026-11-26.4` (Phase 4E.1) | The ok=false rule now says "fix the arguments once without changing what the user asked about". New rule: "When a question contains an invalid category or a false premise, correct it directly. Do not silently substitute a different category, person, year or question. Offer alternatives only when the user asks for them or they are clearly necessary, and label them as alternatives." Motivated by P4-R05 (a Mathematics question answered with the 1950 Physics laureate). **Real-model result (Phase 4E.2): not followed.** Both invalid-category questions were corrected and then answered with the Physics prize for the same year (V01 Mathematics 1950; V02 Computer Science 2020, one of three laureates). No regressions on the other four questions. |
+| `2026-11-27.1` | Educational content is explained directly and cited like other evidence; no verification disclaimers (the interface labels provenance); first STYLE rules (start with the answer). |
+| `2026-11-27.2` | **General scientific knowledge fallback.** Retrieved evidence first; cite only results that support a statement. For relevant science questions the evidence does not fully answer, a concise, uncited explanation from well-established knowledge is allowed (mixed answers put it in a final uncited paragraph). Specific Nobel facts (winners, years, motivations, statistics) still come only from tools. Brief abstention for unrelated, current-event or uncertain questions. |
+| `2026-11-27.3` (current) | No retrieval commentary ("The search returned…", database coverage) in ordinary explanations; limitations only when genuinely necessary; short paragraphs and "- " bullets; Unicode formulas (E = mc²) instead of LaTeX; applies to every scientific topic. |
+
+Prompts `2026-11-27.1`–`.3` were checked with deterministic tests and the scripted evaluation only; they have
+**not** been evaluated with a real model.
 
 ### Evaluator versions
 
@@ -605,6 +641,12 @@ VITE_API_BASE_URL=http://127.0.0.1:8000 npx vite --host 127.0.0.1
   did not change this. No guardrail was added; the behaviour is documented rather than fixed.
 * **Evaluator v3 limits.** One valid abstention (V06) is scored invalid, and the lexical support review
   misses spelled-out numbers. Claim-level grounding remains a manual judgement.
+* **General scientific knowledge.** Since prompt `2026-11-27.2` the model may answer relevant science
+  questions from pretrained knowledge when retrieval does not cover them. Such statements are uncited and
+  marked by a note, but they are not checked against Nobel Explorer data and may contain errors. Real-model
+  behaviour of prompts `2026-11-27.1`–`.3` has not been evaluated.
+* **Note classification is heuristic.** The general-knowledge and partial-sourcing notes are derived in the
+  browser from citations and a short abstention pattern check.
 * **Scope.** Local only (no authentication, rate limiting, spend monitoring or deployment); session-only
   history; only `**bold**` is rendered; duplicate evidence ids are grouped in the UI, not in the backend;
   the first knowledge search after a server start takes about 5 s.
@@ -615,16 +657,16 @@ Distinct tests (each counted once even when run in two environments):
 
 | Suite | Distinct tests | Result |
 |---|---|---|
-| Frontend unit and component tests (`frontend/src/**/*.test.*`, Vitest + RTL, jsdom) | 274 | 274 passed |
-| AI unit tests (`backend/ai/tests`, SQLite fixtures, fake embedder and fake chat model) | 432 | 432 passed (`.venv-ai`) |
+| Frontend unit and component tests (`frontend/src/**/*.test.*`, Vitest + RTL, jsdom) | 299 | 299 passed |
+| AI unit tests (`backend/ai/tests`, SQLite fixtures, fake embedder and fake chat model) | 444 | 444 passed (`.venv-ai`) |
 | Integration: real all-MiniLM-L6-v2 + live read-only MySQL (opt-in) | 18 | 18 passed |
 | Paid real-LLM test (opt-in, needs approval) | 1 | not run |
 | Existing backend/ETL regression suite (isolated `nobel_explorer_ai_test`) | 297 | 297 passed in `.venv` and `.venv-ai` |
 
 The base `.venv` (no AI packages) runs 186 of the AI unit tests and skips the
 rest cleanly, proving the application works without AI dependencies. Total distinct
-permanent tests: 274 frontend + 432 AI unit + 18 integration + 297 backend/ETL = 1,021
-(paid test excluded). Counts as of Phase 4E.2.
+permanent tests: 299 frontend + 444 AI unit + 18 integration + 297 backend/ETL = 1,058
+(paid test excluded). Counts as of the Nobel Intelligence MVP.
 
 Evaluations: Phase 2 tool evaluation 30/30; agent fake-model evaluation 32 cases,
 every automated metric 32/32, 3/3 negative controls detected (deterministic,

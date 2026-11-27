@@ -1,24 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import AssistantComposer from "../components/assistant/AssistantComposer";
 import AssistantExchange from "../components/assistant/AssistantExchange";
 import SuggestedQuestions from "../components/assistant/SuggestedQuestions";
+import WelcomeIllustration from "../components/assistant/WelcomeIllustration";
 import { ASSISTANT_MAX_QUESTION_CHARS, askResearchAssistant } from "../services/api";
 import { EXTENDED_WAIT_MESSAGE, EXTENDED_WAIT_SECONDS } from "../utils/assistantEvidence";
 
 const SUGGESTED_QUESTIONS = [
-  "Who won the 2022 Chemistry prize?",
-  "Explain click chemistry in simple terms.",
   "Who won the 2023 Medicine prize and what did they discover?",
-  "How do solar cells convert sunlight into electricity?",
+  "Explain click chemistry in simple terms.",
   "Which three birth countries have the most Nobel laureates?",
   "Why did Albert Einstein receive the Nobel Prize?",
 ];
-
-const COVERAGE_NOTICE =
-  "Nobel Explorer currently covers Nobel Prize records from 1901–2025. Detailed educational explanations are "
-  + "available for selected discoveries. Each question is answered independently. AI-generated answers may "
-  + "contain errors.";
 
 // A request "failed" when there is nothing useful to keep: the visitor's
 // question is put back into an empty input so they can edit or retry.
@@ -36,6 +31,9 @@ function announcementFor(result) {
 }
 
 function AssistantPage() {
+  // Tool activity is for debugging and evaluation only: /assistant?debug shows it.
+  const [searchParams] = useSearchParams();
+  const debug = searchParams.has("debug");
   const [question, setQuestion] = useState("");
   const [exchanges, setExchanges] = useState([]);
   const [pendingId, setPendingId] = useState(null);
@@ -149,46 +147,51 @@ function AssistantPage() {
 
   const pending = pendingId !== null;
 
+  const hasConversation = exchanges.length > 0;
+
   return (
-    <section className="assistant-page container" aria-labelledby="assistant-heading">
-      <header className="assistant-header">
-        <p className="eyebrow">Ask AI</p>
-        <h1 id="assistant-heading">AI Research Assistant</h1>
-        <p className="assistant-intro">
-          Ask about Nobel laureates, prizes and statistics, or for explanations of selected discoveries.
-          Answers are built from Nobel Explorer&apos;s own records and cite the evidence they used.
-        </p>
-        <p className="assistant-coverage">{COVERAGE_NOTICE}</p>
-      </header>
+    <section
+      className={`assistant-page container${hasConversation ? " assistant-page--active" : ""}`}
+      aria-labelledby="assistant-heading"
+    >
+      <div className="assistant-shell">
+        <header className="assistant-header">
+          {/* Always shown; assistant.css scales it to 65% during a conversation. */}
+          <WelcomeIllustration />
+          <h1 id="assistant-heading">Nobel Intelligence</h1>
+          <p className="assistant-subtitle">Discover the people, ideas and science that changed our world.</p>
+        </header>
 
-      <SuggestedQuestions questions={SUGGESTED_QUESTIONS} onSelect={selectSuggestion} />
+        {hasConversation ? (
+          // A labelled region, not role="log": one polite announcer below reports
+          // progress, so the timer and new answers are not read twice.
+          <section className="assistant-conversation" aria-labelledby="assistant-conversation-heading">
+            <h2 className="visually-hidden" id="assistant-conversation-heading">Questions and answers in this session</h2>
+            {exchanges.map((exchange) => (
+              <AssistantExchange
+                key={exchange.id}
+                exchange={exchange}
+                elapsedSeconds={exchange.id === pendingId ? elapsedSeconds : 0}
+                debug={debug}
+              />
+            ))}
+          </section>
+        ) : (
+          <SuggestedQuestions questions={SUGGESTED_QUESTIONS} onSelect={selectSuggestion} />
+        )}
 
-      {exchanges.length > 0 && (
-        // A labelled region, not role="log": one polite announcer below reports
-        // progress, so the timer and new answers are not read twice.
-        <section className="assistant-conversation" aria-labelledby="assistant-conversation-heading">
-          <h2 className="visually-hidden" id="assistant-conversation-heading">Questions and answers in this session</h2>
-          {exchanges.map((exchange) => (
-            <AssistantExchange
-              key={exchange.id}
-              exchange={exchange}
-              elapsedSeconds={exchange.id === pendingId ? elapsedSeconds : 0}
-            />
-          ))}
-        </section>
-      )}
-
-      <AssistantComposer
-        value={question}
-        onChange={setQuestion}
-        onSubmit={submitQuestion}
-        onCancel={cancelRequest}
-        onClear={clearConversation}
-        pending={pending}
-        canClear={pending || exchanges.length > 0}
-        maxChars={ASSISTANT_MAX_QUESTION_CHARS}
-        textareaRef={textareaRef}
-      />
+        <AssistantComposer
+          value={question}
+          onChange={setQuestion}
+          onSubmit={submitQuestion}
+          onCancel={cancelRequest}
+          onClear={clearConversation}
+          pending={pending}
+          canClear={pending || hasConversation}
+          maxChars={ASSISTANT_MAX_QUESTION_CHARS}
+          textareaRef={textareaRef}
+        />
+      </div>
 
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">{announcement}</p>
     </section>

@@ -1,4 +1,4 @@
-"""Prompt v4 (2026-11-26.4): configuration checks and scripted scenarios.
+"""Prompt configuration checks and scripted scenarios (v4 rule from 2026-11-26.4; style rules from 2026-11-27.1).
 
 The scripted model only proves that the rule reaches the model on every call and
 that the agent loop handles an invalid category without substituting another
@@ -21,7 +21,7 @@ NO_SUBSTITUTION_RULE = (
 
 def test_prompt_version_follows_date_and_counter_convention():
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}\.\d+", PROMPT_VERSION)
-    assert PROMPT_VERSION == "2026-11-26.4"
+    assert PROMPT_VERSION == "2026-11-27.3"
 
 
 def test_no_substitution_rule_is_present_verbatim():
@@ -43,14 +43,31 @@ def test_argument_fixes_must_not_change_the_question():
     "Cite only ids that appear in tool results",
     "Corrections of false premises need evidence too",
     "not as an independent or verified external source",
-    "If the evidence is missing or insufficient, say so explicitly",
-    "do not fill gaps from general knowledge",
+    "If the tools have no record, say so explicitly",
+    "never supply such facts from memory",
     "ordinary sentences, without citations",
     "Combine tools for multi-part questions",
     "You only have the four tools above",
 ])
 def test_existing_rules_preserved(rule):
     assert rule in SYSTEM_PROMPT
+
+
+def test_style_rules_ask_for_direct_answers_without_meta_introductions():
+    assert "Begin directly with the scientific explanation or the factual answer." in SYSTEM_PROMPT
+    assert "do not add verification disclaimers about it" in SYSTEM_PROMPT
+    # Old wording that produced "Nobel Explorer educational material describes ..." openings is gone.
+    assert "describe it as Nobel Explorer educational material" not in SYSTEM_PROMPT
+
+
+def test_educational_content_is_still_not_presented_as_verified():
+    assert "Treat it as Nobel Explorer educational content" in SYSTEM_PROMPT
+    assert "never present its related_source as a citation" in SYSTEM_PROMPT
+
+
+def test_warnings_for_missing_or_conflicting_evidence_remain():
+    assert "Mention a limitation only when it is genuinely necessary" in SYSTEM_PROMPT
+    assert "If the tools have no record, say so explicitly in one short sentence" in SYSTEM_PROMPT
 
 
 def test_prompt_still_names_exactly_the_four_tools():
@@ -116,3 +133,56 @@ def test_substituted_answer_is_still_mechanically_accepted(tool_context):
 
     response, _ = _run("Who won the Nobel Prize in Mathematics in 1921?", policy, tool_context)
     assert response.grounding == "cited" and [c.evidence_id for c in response.citations] == ["E1"]
+
+
+# ---------------------------------------------------------------- general-knowledge fallback (2026-11-27.2)
+
+def test_general_knowledge_fallback_is_bounded():
+    assert "Use retrieved evidence first." in SYSTEM_PROMPT
+    assert "never cite unrelated search results" in SYSTEM_PROMPT
+    assert "you may give a concise explanation from well-established general scientific knowledge" in SYSTEM_PROMPT
+    assert "Do not cite it, do not attribute it to Nobel Explorer or to any named source" in SYSTEM_PROMPT
+    assert "do not explain database limitations" in SYSTEM_PROMPT
+    assert "put the general explanation in a separate final paragraph without citations" in SYSTEM_PROMPT
+
+
+def test_nobel_specific_facts_still_come_only_from_tools():
+    assert "Specific Nobel facts (who won, years, categories, motivations, affiliations, counts and other statistics)" in SYSTEM_PROMPT
+    assert "come only from tool results" in SYSTEM_PROMPT
+    assert "do not fill gaps from general knowledge" not in SYSTEM_PROMPT  # replaced by the bounded fallback
+
+
+def test_abstention_is_preserved_for_unrelated_time_sensitive_or_uncertain_questions():
+    assert "Decline briefly, in one sentence, when a question is unrelated to Nobel Prizes" in SYSTEM_PROMPT
+    assert "when it depends on recent or current events, or when you are not confident" in SYSTEM_PROMPT
+    assert "Never invent facts, names, numbers, URLs or citations." in SYSTEM_PROMPT
+
+
+# ---------------------------------------------------------------- answer style (2026-11-27.3)
+
+@pytest.mark.parametrize("phrase", [
+    "The search returned material about...", "The retrieved evidence...", "Nobel Explorer has no explanation...",
+])
+def test_retrieval_commentary_openings_are_named_as_forbidden(phrase):
+    assert phrase in SYSTEM_PROMPT
+    assert "Never open with commentary about the search" in SYSTEM_PROMPT
+
+
+def test_no_retrieval_or_coverage_discussion_in_ordinary_explanations():
+    assert ("Do not discuss search results, retrieval failures, weak matches or database coverage in ordinary "
+            "scientific explanations.") in SYSTEM_PROMPT
+    assert "The interface already shows how the answer was found" in SYSTEM_PROMPT
+    assert "say that it does not" not in SYSTEM_PROMPT  # wording that invited retrieval commentary
+
+
+def test_readable_formatting_and_unicode_math():
+    assert 'simple bullet lists (lines starting with "- ")' in SYSTEM_PROMPT
+    assert "Do not use Markdown headings, tables or links." in SYSTEM_PROMPT
+    assert "E = mc²" in SYSTEM_PROMPT and "not LaTeX" in SYSTEM_PROMPT
+    assert "Apply these rules to every scientific topic." in SYSTEM_PROMPT
+
+
+def test_accuracy_rules_are_unchanged_by_the_style_rules():
+    for rule in ("Cite only ids that appear in tool results", "Never invent facts, names, numbers, URLs or citations.",
+                 "Corrections of false premises need evidence too", "If the tools have no record, say so explicitly"):
+        assert rule in SYSTEM_PROMPT

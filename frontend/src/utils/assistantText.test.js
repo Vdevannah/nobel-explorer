@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { citedEvidenceIds, splitEmphasis, tokenizeAnswer } from "./assistantText";
+import { citedEvidenceIds, claimsByEvidence, plainAnswerText, splitEmphasis, stripCitations, tokenizeAnswer } from "./assistantText";
 
 const citations = (tokens) => tokens.filter((t) => t.type === "citations").map((t) => t.ids);
 const markers = (tokens) => tokens.filter((t) => t.type === "marker").map((t) => t.marker);
@@ -119,5 +119,39 @@ describe("splitEmphasis", () => {
 
   it("returns no segments for empty or non-string input", () => {
     for (const value of ["", null, undefined, 3]) expect(splitEmphasis(value)).toEqual([]);
+  });
+});
+
+describe("learner view helpers", () => {
+  it("strips evidence ids with tidy punctuation and keeps validation markers", () => {
+    expect(stripCitations("Bertozzi [E1], Sharpless [E2] and Meldal [E3] won [unverified].")).toBe(
+      "Bertozzi, Sharpless and Meldal won [unverified].",
+    );
+    expect(stripCitations("[E1] Starts with a citation.\n**[E2] Bold** and [ e3 , E4 ] grouped.")).toBe(
+      "Starts with a citation.\n**Bold** and grouped.",
+    );
+    expect(stripCitations(null)).toBe("");
+  });
+
+  it("produces clean copy text without ids or ** markers", () => {
+    expect(plainAnswerText("Einstein did **not** win for relativity [E1].")).toBe("Einstein did not win for relativity.");
+  });
+
+  it("maps each evidence id to the statements that cite it, including citation-only fragments and bullets", () => {
+    const claims = claimsByEvidence(
+      "Karikó and Weissman shared the 2023 prize [E1][E2]. They modified nucleosides. [E4]\n\n- Vaccines followed [E4]\n- Uncited point",
+    );
+    expect(claims).toEqual({
+      E1: ["Karikó and Weissman shared the 2023 prize."],
+      E2: ["Karikó and Weissman shared the 2023 prize."],
+      E4: ["They modified nucleosides.", "Vaccines followed"],
+    });
+    expect(claimsByEvidence("")).toEqual({});
+    expect(claimsByEvidence(null)).toEqual({});
+  });
+
+  it("shortens very long statements", () => {
+    const long = `${"word ".repeat(80).trim()}. [E1]`;
+    expect(claimsByEvidence(long).E1[0].length).toBeLessThanOrEqual(220);
   });
 });
