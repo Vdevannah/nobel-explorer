@@ -7,12 +7,26 @@ laureates, discoveries, and their real-world scientific impact.
 
 **Live application:** [nobel-explorer.up.railway.app](https://nobel-explorer.up.railway.app)
 
+**AI research assistant:** [Nobel Intelligence](https://nobel-explorer.up.railway.app/assistant)
+
 **GitHub repository:** [Vdevannah/nobel-explorer](https://github.com/Vdevannah/nobel-explorer)
 
 Explore Nobel Prize categories and laureates, search and browse laureate
 profiles, learn Nobel-winning science through multiple learning levels, explore
 interactive analytics and visualizations, and test your knowledge with the
 Nobel Prize quiz.
+
+## Nobel Intelligence — Agentic AI research assistant
+
+![Nobel Intelligence AI research assistant](docs/images/nobel-intelligence-assistant.png)
+
+Ask questions in plain English about Nobel laureates, prizes and the science
+behind them. Built with LangChain and OpenAI, the agent combines agentic RAG over
+a ChromaDB knowledge base, structured SQL retrieval and dynamic tool calling
+across four read-only tools, and shows the sources behind its answers. See
+[docs/ai_research_assistant.md](docs/ai_research_assistant.md) for the
+architecture and [docs/ai_agent_evaluation_summary.md](docs/ai_agent_evaluation_summary.md)
+for the evaluation results.
 
 ## Deployment architecture
 

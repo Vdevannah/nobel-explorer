@@ -1,6 +1,7 @@
 # AI Research Assistant — Retrieval (Phase 1), Tools (Phase 2), Agent (Phase 3) and Frontend (Phase 4)
 
-> Local development feature. The AI research assistant is **not deployed**; the endpoint is disabled by default.
+> Deployed on Railway (Phase 5C, commit `c4d18eb`) behind the Phase 5B safeguards. The endpoint stays disabled unless
+> `AI_AGENT_ENABLED=true` is set on the backend service.
 > Phase 4 (React assistant, tests and real-model browser evaluation) is complete as an MVP; see
 > "Known MVP limitations" for accepted issues.
 
@@ -21,11 +22,11 @@
 | Real OpenAI model evaluation (gpt-6-luna, 10 questions) | **Done (Phase 3B/3C)** |
 | Real-model browser evaluation of prompt v3 (9 questions) | **Done (Phase 4D.2)** |
 | Targeted real-model validation of prompt v4 (6 questions) | **Done (Phase 4E.2)**: the no-substitution rule was **not** followed; accepted as a known MVP limitation |
-| `POST /ai/chat` endpoint | **Implemented (Phase 3), local only** — disabled by default; not for public deployment |
-| "Nobel Intelligence" assistant page (`/assistant`, navbar "Ask AI"): learner-focused answers, collapsible Sources, general-knowledge notes | **Implemented (Phase 4), local only** |
+| `POST /ai/chat` endpoint | **Implemented (Phase 3), deployed on Railway (Phase 5C)** — disabled unless `AI_AGENT_ENABLED=true`; rate, concurrency, body-size and spend limits (Phase 5B) |
+| "Nobel Intelligence" assistant page (`/assistant`, navbar "Ask AI"): learner-focused answers, collapsible Sources, general-knowledge notes | **Implemented (Phase 4), deployed on Railway (Phase 5C)** |
 | Permanent frontend tests (Vitest + React Testing Library) | **Implemented (Phase 4D.1)** |
 | Development-only fake agent server (real backend, scripted model) | **Implemented (Phase 4D.1)** |
-| Docker / Railway deployment of the AI stack | Planned (Phase 5) — Dockerfiles are unchanged |
+| Docker / Railway deployment of the AI stack | **Deployed (Phase 5C)** — CPU-only image with the pinned embedding model and packaged index (Phase 5B) |
 
 Phases 1–3 do not change existing routes, frontend, Dockerfiles or database
 schema; Phase 3 only registers the new `/ai/chat` router. Phase 4 adds the
