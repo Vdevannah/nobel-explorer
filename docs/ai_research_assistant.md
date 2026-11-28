@@ -1,7 +1,7 @@
 # AI Research Assistant — Retrieval (Phase 1), Tools (Phase 2), Agent (Phase 3) and Frontend (Phase 4)
 
-> Deployed on Railway (Phase 5C, commit `c4d18eb`) behind the Phase 5B safeguards. The endpoint stays disabled unless
-> `AI_AGENT_ENABLED=true` is set on the backend service.
+> **Live on Railway** (Phase 5C, commit `c4d18eb`): the backend service runs with `AI_AGENT_ENABLED=true`, behind
+> the Phase 5B safeguards.
 > Phase 4 (React assistant, tests and real-model browser evaluation) is complete as an MVP; see
 > "Known MVP limitations" for accepted issues.
 
